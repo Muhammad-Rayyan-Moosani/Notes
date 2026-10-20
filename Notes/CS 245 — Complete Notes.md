@@ -11,8 +11,8 @@ term: Fall 2026
 
 *UWaterloo, instructor Lila Kari. All propositional-logic lectures in one file. Math is written in plain Unicode so it reads in any viewer (Obsidian, terminal, GitHub). A per-chapter **Glossary** is at the end.*
 
-> [!warning] Topics 6–7 are reconstructed
-> Those two lecture transcripts came through auto-transcription badly garbled, with no slides. Both were reconstructed from the clear fragments + standard course material — verify against the official slides when posted.
+> [!success] Topics 6–7 verified against the slides
+> These two topics were first reconstructed from garbled transcripts, then **cross-checked and corrected against the official Logic05 slide deck** ("Adequate set of connectives, logic gates, circuit design and minimization"). (Gray codes & Karnaugh maps in Topic 5, and the PNP/NPN transistor aside, are lecture extras not in the Logic05 slides.)
 
 ## 📖 Index
 
@@ -23,13 +23,15 @@ term: Fall 2026
 5. **[[#Topic 5 — Tutorial: DNF & CNF Both Ways (+ Gray Codes & Karnaugh Maps)|Topic 5 — DNF & CNF Tutorial]]** — a worked recitation: CNF three ways, the one-literal merge, Gray codes & Karnaugh maps
 6. **[[#Topic 6 — Adequate Sets of Connectives, Boolean Algebra & Digital Circuits|Topic 6 — Adequacy, Boolean Algebra & Circuits]]** — counting connectives, adequate sets, NAND/NOR, Boolean algebra, logic gates
 7. **[[#Topic 7 — Combinational Circuit Design, Adders & Minimization|Topic 7 — Combinational Circuits & Adders]]** — circuit drawing, minimization, majority vote, parity/XOR, binary arithmetic, half/full adders, simplifying code
-8. **[[#Glossary|Glossary]]** — key terms, grouped by chapter
+8. **[[#Topic 8 — Formal Deduction in Propositional Logic|Topic 8 — Formal Deduction]]** — the ⊢ proof system: 11 rules, formal proofs, syntactic equivalence, soundness & completeness
+9. **[[#Topic 9 — Automated Theorem Proving by Resolution|Topic 9 — Resolution]]** — the single resolution rule, refutation via the empty clause, set-of-support, the Davis–Putnam Procedure
+10. **[[#Glossary|Glossary]]** — key terms, grouped by chapter
 
 ### How to read these notes
 
 `[!note]`/`[!abstract]` = definitions & theorems · **⚠️ `[!warning]`** = edge cases / exam traps · **💡 `[!tip]`** = instructor intuition from lecture · **✅ `[!success]`** = the key rule to remember · **`[!example]`** = worked problems & puzzles · **`[!summary]`** = per-topic learning objectives. Math symbols are written directly as Unicode (¬ ∧ ∨ → ↔ ⊨ ≡ ∑ …) so they read in any viewer.
 
-**Source materials:** slide decks `CS245-2Mode-LogicNN-…-pedagogical*.pdf`; lecture transcripts. Topics 1–2 were slide-only; Topics 3–7 integrate transcripts.
+**Source materials:** slide decks `CS245-2Mode-LogicNN-…-pedagogical*.pdf`; lecture transcripts. Topics 1–2 were slide-only; Topics 3–8 integrate transcripts; Topics 8–9 are the Logic06/Logic07 decks (Topic 9 slide-based). Topics 6–7 were drafted from transcripts and then verified/corrected against the **Logic05** slide deck; Topics 8–9 come from the **Logic06/Logic07** slides.
 
 > [!tip] Navigation
 > In Obsidian, use the **Outline** panel (or the heading list) to jump between topics; in a terminal, search (`/`) for "# Topic N" or "## Glossary".
@@ -637,15 +639,15 @@ A Dr. Racket tool (link on Piazza) that computes DNF/CNF, builds truth tables, a
 
 # Topic 6 — Adequate Sets of Connectives, Boolean Algebra & Digital Circuits
 
-> [!warning] Source caveat — reconstructed
-> This lecture's transcript came through auto-transcription badly garbled (mis-detected as another language, no slides provided). These notes are **reconstructed** from the clear technical fragments + standard CS 245 material — please cross-check against the official slides when posted.
+> [!success] Verified against the official slides
+> Cross-checked and corrected against the official **Logic05 slide deck**. (The PNP/NPN transistor note at the end is a lecture aside not in the slides.)
 
 
 ## 6.1 How many connectives are there?
 
 An **n-ary connective** is a function {0,1}ⁿ → {0,1}. Its truth table has 2ⁿ rows, and each row's output can independently be 0 or 1 — so there are
 
-#{\,n-ary connectives } = 2^(2ⁿ)
+(number of n-ary connectives) = 2^(2ⁿ)
 
 | arity n | rows 2ⁿ | # connectives 2^(2ⁿ) |
 |---|---|---|
@@ -662,7 +664,7 @@ An **n-ary connective** is a function {0,1}ⁿ → {0,1}. Its truth table has 2�
 
 ### The 16 binary connectives
 
-These include the familiar ∧, ∨, →, ↔, plus the two constants, NAND, NOR, XOR, and "degenerate" ones that ignore an argument. The table is **symmetric**: each connective Gᵢ is the **negation** of its partner G₁₇₋ᵢ (e.g. ∧ ↔ NAND, ∨ ↔ NOR) — so knowing half the table gives you the other half.
+These include the familiar ∧, ∨, →, ↔, plus the two constants, NAND, NOR, XOR, and "degenerate" ones that ignore an argument. In the standard numbering g₁…g₁₆: **g₅ = NAND** = ¬(p∧q), **g₁₅ = NOR** = ¬(p∨q), **g₉ = XOR** = ¬(p↔q). The table is **symmetric**: gᵢ = ¬g₁₇₋ᵢ for every i (e.g. ∧ ↔ NAND, ∨ ↔ NOR), so knowing half the table gives you the other half.
 
 ### Ternary example — "if-then-else" (multiplexer)
 
@@ -677,12 +679,15 @@ ite(p,q,r) ≡ (p ∧ q) ∨ (¬ p ∧ r)
 
 ### {¬, ∧, ∨} is adequate (Post)
 
-**Why:** the **DNF construction** — any formula is tautologically equivalent to the DNF read off its truth table (one conjunctive clause per true row, all OR'd together), which uses only ¬, ∧, ∨. (Edge case: the always-false function is p ∧ ¬ p.) This is Emil **Post's** result that these three suffice.
+**Why:** the **DNF construction** — any formula is tautologically equivalent to the DNF read off its truth table (one conjunctive clause per true row, all OR'd together), which uses only ¬, ∧, ∨. (Edge case: the always-false function is p ∧ ¬ p.) **Post (1921)** observed that the five standard connectives {¬, ∧, ∨, →, ↔} are adequate; the course sharpens this to the smaller **{¬, ∧, ∨}** via the DNF construction above.
 
 ### Shrinking the set with De Morgan
 
 - **{¬, ∧} is adequate:** recover ∨ by A ∨ B ≡ ¬(¬ A ∧ ¬ B).
 - **{¬, ∨} is adequate:** recover ∧ by A ∧ B ≡ ¬(¬ A ∨ ¬ B).
+- **{¬, →} is adequate:** recover ∨ by A ∨ B ≡ ¬A → B (since A → B ≡ ¬A ∨ B).
+
+(These three — {¬,∧}, {¬,∨}, {¬,→} — are the adequate two-element sets proved in the Logic05 deck.)
 
 > [!tip] Adequacy test
 > To prove a set S is adequate, show S can express an **already-known adequate set** (e.g. express ¬ together with one of ∧ / ∨). Adequacy is transitive: if S builds {¬, ∧} and {¬, ∧} builds everything, then S builds everything.
@@ -704,9 +709,10 @@ ite(p,q,r) ≡ (p ∧ q) ∨ (¬ p ∧ r)
 
 ### Proving a set is NOT adequate
 
-- **{∧, ∨} is not adequate.** Take the valuation t with pᵗ = 1 for **every** atom. A **structural induction** shows every {∧, ∨}-formula is 1 under t (base: atoms are 1; and ∧, ∨ of 1s is 1). But (¬ p)ᵗ = 0, so ¬ p is **inexpressible** → the set can't be adequate.
-- Likewise {∧} or {∨} alone cannot build ¬; {¬} alone (unary) cannot combine two variables.
-- **Method:** find an invariant preserved by every allowed connective but violated by the target function (structural induction), or argue by contradiction.
+**Strategy.** Find a **property** that every formula built from S's connectives has, but that some connective in the adequate set {¬, ∧, ∨} lacks.
+
+- **Example — {∧} is not adequate.** *Claim:* any formula on a single atom p using only ∧ has value **0** under every valuation t with pᵗ = 0 (prove by structural induction). So if ¬p were expressible as such a formula A, then Aᵗ = 0 when pᵗ = 0, whereas (¬p)ᵗ = 1 there — contradiction. Hence ¬ is not definable from ∧, and {∧} is not adequate.
+- Similarly {∨} alone cannot build ¬; {¬} alone (unary) cannot combine two variables. And {∧, ∨} cannot build ¬ — under the all-true valuation every {∧, ∨}-formula is 1, but ¬p is 0 there.
 
 ## 6.3 Boolean algebra
 
@@ -724,7 +730,7 @@ So logical ∨/∧/¬ and set ∪/∩/complement obey **identical** laws — sam
 
 Connectives are physically realized by **logic gates**; real computers are built from them.
 
-- **Switches / transistors.** A transistor acts as a voltage-controlled switch. Two switches in **series** compute ∧ (AND); in **parallel** compute ∨ (OR).
+- **Switches / transistors.** A transistor is a **switch** with three lines — a **control line** (base) and an in→out pair (**collector** → **emitter**). Voltage on the control line (1) closes it (ON → output 1); no voltage (0) opens it (OFF → output 0). Two switches in **series** compute ∧ (AND); in **parallel** compute ∨ (OR). *(Any **bistable device** — even ordinary light switches — could replace transistors; future tech may be optical / biological / quantum.)*
 - **NOT (inverter):** a transistor with a pull-up **resistor** — a high input pulls the output down to ground (0); no input leaves it high (1). The resistor is there so the output doesn't float / short.
 - **NOR:** two transistors in **parallel** to ground — output is high only if **neither** input is high: ¬(A ∨ B).
 - **NAND:** two transistors in **series** — output is low only if **both** inputs are high: ¬(A ∧ B).
@@ -734,8 +740,15 @@ Connectives are physically realized by **logic gates**; real computers are built
 
 **Enrichment (not on the exam):** semiconductor physics — **silicon** doped into **p-type / n-type** regions, **PNP / NPN** transistors, and energy bands / "holes" whose motion (set by whether a control voltage is applied) decides whether the device conducts.
 
+## 6.5 Non-standard gates: the Toffoli gate & quantum computing
+
+> [!note] Toffoli gate (CCNOT)
+> A **3-bit input, 3-bit output** gate: if the first two bits are both 1, **flip** the third bit; otherwise leave all three unchanged — T(x, y, z) = (x, y, z ⊕ (x ∧ y)).
+> - **Universal:** it alone implements the adequate set {∧, ¬} — T(x, y, 0) = (x, y, x ∧ y) gives AND, and T(1, 1, z) = (1, 1, ¬z) gives NOT.
+> - **Reversible:** the input is uniquely recoverable from the output (¬ is reversible, but ∧ on its own is not). It can be built from **five 2-qubit quantum gates**, so a quantum computer using Toffoli gates can carry out all classical computation (first realized in a quantum device at Innsbruck, Jan 2009).
+
 > [!summary] Takeaways (Topic 6)
-> Count connectives with 2^(2ⁿ) (4 unary, 16 binary, 256 ternary); know what an **adequate set** is; {¬, ∧, ∨} (via DNF), then {¬, ∧}, {¬, ∨}, and finally **NAND** or **NOR** alone are adequate; prove **inadequacy** by a structural-induction invariant (e.g. {∧, ∨} can't make ¬); the **Boolean-algebra** axioms with propositional logic and power sets as models; and how gates/transistors realize connectives, with **NAND/NOR** as the efficient universal primitives.
+> Count connectives with 2^(2ⁿ) (4 unary, 16 binary, 256 ternary); know what an **adequate set** is; {¬, ∧, ∨} (via DNF), then {¬, ∧}, {¬, ∨}, {¬, →}, and finally **NAND** or **NOR** alone are adequate; prove **inadequacy** by exhibiting a property preserved by S but not by some standard connective (e.g. {∧} can't make ¬); the **Boolean-algebra** axioms with propositional logic and power sets as models; how gates/transistors realize connectives, with **NAND/NOR** as the efficient universal primitives; and the **Toffoli gate** (universal, reversible, quantum).
 
 ---
 
@@ -744,13 +757,17 @@ Connectives are physically realized by **logic gates**; real computers are built
 > [!abstract] Goal
 > Turn Boolean functions into **gate circuits**, **minimize** them with the same DNF-merging we use on formulas, and see the big applications: **majority voting**, **multi-way switches (parity/XOR)**, **binary arithmetic & adders**, and **simplifying code** in a compiler. This concludes the adequacy → Boolean-algebra → circuits unit begun in Topic 6.
 
-> [!warning] Source caveat — reconstructed
-> This lecture's transcript was auto-transcribed with many garbled words/names (no slides). Reconstructed from the clear structure + standard digital-logic material — **verify against the official slides**.
+> [!success] Verified against the official slides
+> Cross-checked against the official **Logic05 slide deck** — the majority-vote, 3-switch (parity), half/full adder, minimization, and code-simplification examples below all match the slides.
 
 
 ## 7.1 Circuits as DAGs & drawing conventions
 
 A combinational circuit is a **directed acyclic graph (DAG)** — like a tree, but subresults can be **shared** (several "roots", branches that join) and signals **never cycle back**.
+
+> [!note] Combinational circuit
+> A **combinational** (or *combinatorial*) circuit is **memoryless** — its output depends only on the present inputs — and is an **acyclic** combination of **NOT, OR, AND** gates, with n inputs and m outputs in {0,1}. (*Sequential* circuits, which add storage + feedback, are not covered.)
+> **Circuit notation:** x + y = x ∨ y; xy (or x·y) = x ∧ y; x̄ = ¬x; = means tautological equivalence (⊨⊨). AND/OR gates may take several inputs.
 
 When a signal must reach a far-away gate (or wires must cross), there are **three acceptable conventions**:
 
@@ -842,9 +859,9 @@ flowchart LR
   OR --> COUT[Carry-out]
 ```
 
-sum = x ⊕ y ⊕ cᵢₙ cₒᵤₜ = (x ∧ y) ∨ (cᵢₙ ∧ (x ⊕ y))
+sum = x ⊕ y ⊕ cᵢₙ   cₒᵤₜ = (x ∧ y) ∨ (cᵢₙ ∧ (x ⊕ y)) = xy + xcᵢₙ + ycᵢₙ
 
-(The two internal carries can't both be 1, so a single OR suffices.)
+(The two internal carries can't both be 1, so a single OR suffices.) Note that **cₒᵤₜ is exactly the majority-vote function** of x, y, cᵢₙ — a carry happens iff at least two of the three bits are 1.
 
 **Ripple-carry adder.** Chain n full adders, carry propagating along the row. Simple and legit; e.g. a 64-bit adder ≈ 63 full adders + 1 half adder ≈ 127 half adders.
 
@@ -855,14 +872,233 @@ sum = x ⊕ y ⊕ cᵢₙ cₒᵤₜ = (x ∧ y) ∨ (cᵢₙ ∧ (x ⊕ y))
 
 The DNF pair-merging that shrinks circuits also simplifies **Boolean conditions in programs** — a real compiler job.
 
-- **Condition simplification.** In nested `if`s, the compiler already *knows* facts along each branch, so it can drop redundant re-tests in the generated code.
-- **Dead-code elimination.** Example (Racket-style): `(if (empty? L) base (combine (first L) (f (rest L))))`. `first`/`rest` each do a null check that throws on empty — but in the **else** branch we already proved `L` is non-empty, so those checks (and their error branches) are **unreachable dead code** and can be removed.
+- **The method (from the slides).** For nested `if`s on conditions C₁, C₂, C₃, write the **truth table** of the conditions; for each valuation see which block (P₁, P₂, P₃, P₄) runs. A block **Pᵢ is dead code** (never executed) iff the propositional formula over C₁, C₂, C₃ that triggers it is a **contradiction** (always 0); it is reachable iff that formula is satisfiable. Two code fragments are **equivalent** iff, for each Pᵢ, the formula triggering it in one is **logically equivalent** to the formula triggering it in the other — so the laws of propositional calculus let you **simplify the control flow** and drop dead branches.
+- **Dead-code example (Racket-style):** `(if (empty? L) base (combine (first L) (f (rest L))))`. `first`/`rest` each do a null check that throws on empty — but in the **else** branch we already proved `L` is non-empty, so those checks (and their error branches) are triggered by a **contradiction → dead code** and can be removed.
 
 > [!tip] Looks trivial, matters a lot
 > From a pure-logic view this is almost nothing, but it's exactly how compilers turn clean, defensively-written code into fast machine code.
 
 > [!summary] Learning objectives (Topic 7 — unit wrap-up)
 > Know what it means for a connective set to be **adequate**; the abstract notion of **Boolean algebra**; the **gates** (NOT, AND, OR, NAND/NOR, XOR); how to **design a combinational circuit** from gates; how to **minimize** circuits by merging adjacent DNF terms (distributivity + A ∨ A ≡ A); why some functions (majority at scale, parity) force a smarter representation (XOR chains, adders); and how the same simplification cleans up **code** (condition simplification + dead-code elimination).
+
+---
+
+# Topic 8 — Formal Deduction in Propositional Logic
+
+> [!abstract] Goal
+> Replace the **semantic** test of validity (truth tables, tautological consequence ⊨) with a purely **syntactic** proof system — **formal deducibility ⊢**, given by **11 rules** that can be checked mechanically. Then show the two agree: **Soundness** (⊢ ⇒ ⊨) and **Completeness** (⊨ ⇒ ⊢). *(From the official Logic06 slide deck — not a reconstructed transcript.)*
+
+## 8.1 Formal deducibility ⊢
+
+- Until now we proved arguments valid **semantically** (truth values, tautological consequence ⊨). Now we give **syntactic** rules for deduction.
+- **Formal deducibility** (denoted ⊢) lets us mechanically / syntactically check that an argument is valid. Like ⊨ it is meant to capture validity, but the *method* is **syntactic**: the proofs refer only to the **form** of formulas, never to truth values, so correctness can be checked by a computer.
+- Written **Σ ⊢ A** — "A is formally deducible (provable) from Σ." Σ = the premises (a set, often written as a sequence; order doesn't matter). Σ ∪ {A} is written "Σ, A"; Σ ∪ Σ′ is written "Σ, Σ′".
+
+> [!warning] ⊢ is not a connective
+> "⊨" and "⊢" are **not** symbols of ℒᵖ — they are metalanguage relations *about* formulas. Don't confuse ⊢ (deducible) with → (a connective inside a formula). Related facts: A ⊨ B iff A → B is a tautology; A ⊢ B iff ∅ ⊢ A → B.
+
+## 8.2 The 11 rules of formal deduction
+
+For any formulas A, B, C and any sets of formulas Σ, Σ′:
+
+| # | Rule | Statement | Name |
+|---|---|---|---|
+| 1 | (Ref) | A ⊢ A | Reflexivity |
+| 2 | (+) | If Σ ⊢ A then Σ, Σ′ ⊢ A | Addition of premises |
+| 3 | (¬−) | If Σ, ¬A ⊢ B and Σ, ¬A ⊢ ¬B then Σ ⊢ A | ¬ elimination |
+| 4 | (→−) | If Σ ⊢ A → B and Σ ⊢ A then Σ ⊢ B | → elimination (modus ponens) |
+| 5 | (→+) | If Σ, A ⊢ B then Σ ⊢ A → B | → introduction |
+| 6 | (∧−) | If Σ ⊢ A ∧ B then Σ ⊢ A and Σ ⊢ B | ∧ elimination |
+| 7 | (∧+) | If Σ ⊢ A and Σ ⊢ B then Σ ⊢ A ∧ B | ∧ introduction |
+| 8 | (∨−) | If Σ, A ⊢ C and Σ, B ⊢ C then Σ, A ∨ B ⊢ C | ∨ elimination |
+| 9 | (∨+) | If Σ ⊢ A then Σ ⊢ A ∨ B and Σ ⊢ B ∨ A | ∨ introduction |
+| 10 | (↔−) | If Σ ⊢ A ↔ B and Σ ⊢ A then Σ ⊢ B (and from Σ ⊢ B get Σ ⊢ A) | ↔ elimination |
+| 11 | (↔+) | If Σ, A ⊢ B and Σ, B ⊢ A then Σ ⊢ A ↔ B | ↔ introduction |
+
+Each rule is a **scheme** (template) standing for infinitely many rules — A, B, C may be any formulas and Σ any set.
+
+> [!tip] Intuition for the three "shape-changing" rules
+> - **(¬−) = proof by contradiction:** to prove Σ ⊢ A, add ¬A to the premises and derive both B and ¬B (a contradiction) for some B.
+> - **(∨−) = proof by cases:** to prove Σ, A ∨ B ⊢ C, prove C separately from A and from B.
+> - **(→+):** an assumption may be moved into the antecedent of a conditional — to prove Σ ⊢ A → B it suffices to prove Σ, A ⊢ B.
+
+## 8.3 What a formal proof is
+
+> [!note] Definition — formal deducibility
+> A is **formally deducible** from Σ (written Σ ⊢ A) iff Σ ⊢ A can be generated by a **finite** number of applications of the 11 rules. Equivalently, there is a finite sequence of lines Σ₁ ⊢ A₁, …, Σₙ ⊢ Aₙ in which each line is generated by a rule and the last line is Σ ⊢ A.
+
+- A line may: **stand on its own** (e.g. by Ref); be a **previously-proved theorem** used "for free"; or **follow from earlier lines** by a rule. The cited earlier lines **need not be consecutive**, and the order of lines isn't fixed (each line must only refer to preceding ones).
+- **Checking** a proof is mechanical (automatable). **Finding** a proof may not be — a useful idea is to **work in reverse** from the goal.
+
+**Theorem (membership, ∈).** If A ∈ Σ then Σ ⊢ A. *Proof:* (1) A ⊢ A by (Ref); (2) A, Σ′ ⊢ A by (+). ∎ — thereafter used "for free" as the rule (∈).
+
+**Example — hypothetical syllogism:** A → B, B → C ⊢ A → C.
+
+| # | Sequent | Justification |
+|---|---|---|
+| 1 | A → B, B → C, A ⊢ A → B | (∈) |
+| 2 | A → B, B → C, A ⊢ A | (∈) |
+| 3 | A → B, B → C, A ⊢ B | (→−), 1, 2 |
+| 4 | A → B, B → C, A ⊢ B → C | (∈) |
+| 5 | A → B, B → C, A ⊢ C | (→−), 4, 3 |
+| 6 | A → B, B → C ⊢ A → C | (→+), 5 |
+
+## 8.4 Key theorems about ⊢
+
+> [!note] Finiteness of the premise set
+> If Σ ⊢ A then there is a **finite** Σ⁰ ⊆ Σ with Σ⁰ ⊢ A. (A proof has finitely many lines, so it uses only finitely many premises.) *Proved by structural induction.* From here on, premise sets are assumed finite.
+
+> [!note] Transitivity of deducibility (Tr.)
+> If Σ ⊢ Aᵢ for all 1 ≤ i ≤ n, and A₁, …, Aₙ ⊢ A, then Σ ⊢ A. (Lets you **chain proved theorems** together.)
+
+> [!note] Double-negation
+> ¬¬A ⊢ A (and, as an exercise, A ⊢ ¬¬A). *Proof of ¬¬A ⊢ A:* (1) ¬¬A, ¬A ⊢ ¬A by (∈); (2) ¬¬A, ¬A ⊢ ¬¬A by (∈); (3) ¬¬A ⊢ A by (¬−), 1, 2. Here (¬−) is applied with Σ = {¬¬A}, A := A, B := ¬A.
+
+> [!note] Reductio ad absurdum (¬+) — "¬ introduction"
+> If Σ, A ⊢ B and Σ, A ⊢ ¬B, then Σ ⊢ ¬A. Both (¬−) and (¬+) formalize "proof by contradiction" and look alike, but differ in strength: **(¬−) is stronger**. (¬+) is *derivable* from the 11 rules (using ¬¬A ⊢ A and Tr.), but if you replaced (¬−) by (¬+) in the 11 rules, (¬−) could no longer be proved.
+
+**Syntactic equivalence.** Write **A ⊣⊢ B** when A ⊢ B **and** B ⊢ A (A and B are *syntactically equivalent*). The connectives respect it — if A ⊣⊢ A′ and B ⊣⊢ B′ then ¬A ⊣⊢ ¬A′, A ∧ B ⊣⊢ A′ ∧ B′, etc. This is the **syntactic** analogue of tautological equivalence ≡.
+
+> [!abstract] Theorem — Replaceability (Repl.)
+> If B ⊣⊢ C, and A′ is obtained from A by replacing **some** (not necessarily all) occurrences of B by C, then A ⊣⊢ A′. (Syntactic counterpart of the semantic Replaceability theorem in Topic 3.)
+
+**Empty premise set.** ∅ ⊢ A means A is **formally provable** ("provable from no premises"). Example provable formulas: non-contradiction ∅ ⊢ ¬(A ∧ ¬A) and excluded middle ∅ ⊢ A ∨ ¬A. Also: A₁, …, Aₙ ⊢ A iff ∅ ⊢ A₁ ∧ … ∧ Aₙ → A iff ∅ ⊢ A₁ → (… → (Aₙ → A)).
+
+## 8.5 Soundness & Completeness
+
+A system of formal deducibility ⊢ is **good** iff it matches informal (semantic) reasoning in two ways:
+
+> [!success] The two properties
+> - **(I) Soundness:** if Σ ⊢ A then Σ ⊨ A — you can't prove anything **false** ("nothing but the truth").
+> - **(II) Completeness:** if Σ ⊨ A then Σ ⊢ A — you can prove everything **true** ("the whole truth").
+
+> [!tip] Why you need *both* (instructor's framing)
+> Two broken extremes show why: the **"Baloney System" (BS)** proves *every* A from any Σ — **complete** but **unsound** (it proves falsehoods too); the **"Heavily Secure" system (HS)** proves *nothing* — **sound** but **incomplete**. The goal is the sweet spot where Σ ⊢ A **iff** Σ ⊨ A. (The completeness proof is, per the instructor, "eye-wateringly beautiful"; plan on ~6 hours of practice — e.g. proving the Boolean-algebra laws from the 11 rules. Other proof styles exist: **Fitch** (vertical scopes for nested assumptions), **Gentzen** natural deduction (tree structures, used for typing rules in programming-language theory), and **Lean**-style proofs-as-objects.)
+
+> [!abstract] Soundness Theorem (for the 11 rules)
+> If Σ ⊢ A then Σ ⊨ A. *Proof by structural induction* on the (recursively defined) set of proved theorems: **base** (Ref) — A ⊢ A gives A ⊨ A; **10 inductive subcases**. E.g. subcase (¬−) uses semantic proof by contradiction; subcase (∨−) uses semantic proof by cases.
+
+> [!abstract] Completeness Theorem (for the 11 rules)
+> If Σ ⊨ A then Σ ⊢ A. *Proof idea* for finite Σ = {A₁, …, Aₙ}: **(1)** convert premises to ∅ — from A₁, …, Aₙ ⊨ A get ∅ ⊨ (A₁ → (… → (Aₙ → A))); **(2)** show **every tautology has a formal proof** — build a subproof of A for each row of its truth table, combine them with (∨−) and excluded middle via (Tr.); **(3)** convert ∅ back to the premises.
+
+**Together:** Soundness + Completeness identify the **syntactic** ⊢ with the **semantic** ⊨ — "**the truth, the whole truth** (completeness), **and nothing but the truth** (soundness)."
+
+> [!warning] Formal deduction cannot prove an argument *invalid*
+> ⊢ only establishes **valid** arguments; it cannot demonstrate invalidity. Two classic fallacies it must *not* be able to "prove":
+> - **Denying the antecedent:** T → A, ¬T ⊬ ¬A (the Descartes "I think not" joke).
+> - **Affirming the consequent:** p → ¬q, ¬q ⊬ p (the "I'm keeping the elephants away" joke).
+> To show an argument invalid you still need a **semantic counterexample** (Topic 3).
+
+## 8.6 Proof strategies (guidelines, not algorithms)
+
+> [!tip] How to find a formal proof
+> 1. **Conclusion is an implication, Σ ⊢ A → B** → add A to the premises, prove Σ, A ⊢ B, then one (→+).
+> 2. **A premise is a disjunction, Σ, A ∨ B ⊢ C** → prove Σ, A ⊢ C and Σ, B ⊢ C separately, then (∨−) — proof by cases.
+> 3. **Direct proof of C ⊢ D fails** → prove the **contrapositive** ¬D ⊢ ¬C, then use the flip-flop theorem ("if A ⊢ B then ¬B ⊢ ¬A") + double-negation.
+> 4. **Last resort — proof by contradiction (¬−):** to prove Σ ⊢ B, add ¬B to the premises and derive some C **and** ¬C (any C works), then (¬−). Use (¬+) similarly to prove a negation Σ ⊢ ¬B.
+>
+> Intermediate lines may use a premise set different from Σ (an extra ¬A, or A), but you must **"undo"** those changes so the **last line is exactly Σ ⊢ A** — otherwise you proved a different theorem. These are strategies, **not** algorithms: no guarantee they're optimal or that they terminate.
+
+**More provable theorems (practice set):** A ⊢ ¬¬A (double-negation II); disjunctive syllogism (A ∨ B, ¬A ⊢ B); modus tollens (¬B, A → B ⊢ ¬A); contrapositive (A → B ⊣⊢ ¬B → ¬A); De Morgan (¬(A ∨ B) ⊣⊢ ¬A ∧ ¬B and ¬(A ∧ B) ⊣⊢ ¬A ∨ ¬B); implication rule (A → B ⊣⊢ ¬A ∨ B); non-contradiction ∅ ⊢ ¬(A ∧ ¬A); excluded middle ∅ ⊢ A ∨ ¬A; rule of cases (A → B, ¬A → B ⊢ B); inconsistency (A, ¬A ⊢ B).
+
+**Worked exercise** — prove A → (B ∨ C), A → ¬B, C → ¬D ⊢ A → ¬D, with Σ = {A → (B ∨ C), A → ¬B, C → ¬D} (uses (→+) and previously-proved disjunctive syllogism):
+
+| # | Sequent | Justification |
+|---|---|---|
+| 1 | Σ, A ⊢ A → (B ∨ C) | (∈) |
+| 2 | Σ, A ⊢ A | (∈) |
+| 3 | Σ, A ⊢ B ∨ C | (→−), 1, 2 |
+| 4 | Σ, A ⊢ A → ¬B | (∈) |
+| 5 | Σ, A ⊢ ¬B | (→−), 2, 4 |
+| 6 | Σ, A ⊢ C | 3, 5, disjunctive syllogism, (Tr.) |
+| 7 | Σ, A ⊢ C → ¬D | (∈) |
+| 8 | Σ, A ⊢ ¬D | (→−), 6, 7 |
+| 9 | Σ ⊢ A → ¬D | (→+), 8 |
+
+> [!summary] Learning objectives (Topic 8)
+> Know the definition of **formal deducibility (provability) ⊢**; the **11 rules**; strategies for constructing formal proofs using only the 11 rules; the theorems **Finiteness of the premise set**, **Reductio ad absurdum (¬+)**, and **Transitivity (Tr.)**; the definition of **syntactic equivalence ⊣⊢**; the definitions of **soundness** and **completeness**; and the statement + proof of the **Soundness Theorem** plus the statement of the **Completeness Theorem** for the 11-rule system.
+
+---
+
+# Topic 9 — Automated Theorem Proving by Resolution
+
+> [!abstract] Goal
+> A formal-deduction system with a **single rule** — **resolution** (J.A. Robinson, 1965) — that works only on **disjunctive clauses (CNF)**. Prove an argument valid by **refutation**: show the premises + negated conclusion are **unsatisfiable** by deriving the **empty clause ⊥**. Automate the search with the **Davis–Putnam Procedure (DPP)**. *(From the official Logic07 slide deck.)*
+
+## 9.1 The resolution rule
+
+> [!note] Definition — resolution
+> The only rule, on **disjunctive clauses** C, D and a literal p:
+> **(C ∨ p), (D ∨ ¬p) ⊢ᵣ (C ∨ D)**
+> C and D are the **parent clauses**; (C ∨ D) is the **resolvent**; we **resolve over p**. Special case with C and D both absent: **p, ¬p ⊢ᵣ ⊥**, the **empty clause** — always false (an empty disjunction is an n-ary ∨ with n = 0, i.e. the identity 0).
+
+- Two clauses can be resolved iff they contain **complementary literals** p and ¬p. The resolvent is the disjunction of **all** literals of both parents **except** p and ¬p. Order doesn't matter and duplicate literals may be dropped (e.g. p ∨ q ∨ r, p ∨ ¬r ⊢ᵣ p ∨ q).
+- **Example.** Resolvent of p ∨ ¬q ∨ r and ¬s ∨ q, resolving over q (negative in the first, positive in the second): **p ∨ r ∨ ¬s**.
+
+> [!warning] Resolve over exactly ONE literal
+> A common mistake is cancelling two complementary pairs at once. From p ∨ ¬q and ¬p ∨ q you may **not** derive ⊥ — those clauses are satisfiable (p = q = 1). Only one complementary pair is removed per step. (Doing otherwise breaks **soundness**.)
+
+## 9.2 Proving validity by refutation
+
+Resolution proves validity **by contradiction**. To prove A₁, …, Aₙ ⊨ C:
+
+1. **Pre-process:** convert every formula in {A₁, …, Aₙ, ¬C} to **CNF**; each disjunctive clause becomes one input clause. (E.g. p → (q ∧ r) ≡ (¬p ∨ q) ∧ (¬p ∨ r) → clauses ¬p ∨ q and ¬p ∨ r.)
+2. Run the resolution procedure; if it derives the **empty clause ⊥**, the set {A₁, …, Aₙ, ¬C} is **inconsistent → unsatisfiable → the argument is valid**.
+
+> [!note] Resolution procedure
+> Input: a set of clauses S. **REPEAT:** choose two parents, one containing p and one containing ¬p; resolve them to get D; if D = ⊥, output "empty clause"; otherwise add D to S. (Parent clauses may be re-used.)
+
+**Consistency ↔ satisfiability.** A set Σ is **consistent** w.r.t. ⊢ if there is no F with both Σ ⊢ F and Σ ⊢ ¬F. *Lemma:* if the deduction system is **sound & complete**, Σ is **satisfiable iff consistent** — which is why deriving ⊥ (inconsistency) proves unsatisfiability.
+
+**Example — modus ponens** (p, p → q ⊢ᵣ q):
+
+| # | Clause | Source |
+|---|---|---|
+| 1 | p | premise |
+| 2 | ¬p ∨ q | premise (p → q) |
+| 3 | ¬q | negation of conclusion |
+| 4 | q | resolvent of 1, 2 (over p) |
+| 5 | ⊥ | resolvent of 3, 4 (over q) |
+
+**Example — hypothetical syllogism** (p → q, q → r ⊢ᵣ p → r): clauses ¬p ∨ q and ¬q ∨ r; from ¬(p → r) ≡ p ∧ ¬r get units p and ¬r; resolve 1,3 → q; 2,4 → ¬q; then q, ¬q → ⊥.
+
+> [!tip] Soundness of resolution
+> The resolvent is **tautologically implied** by its parents: (C ∨ p), (D ∨ ¬p) ⊨ (C ∨ D) (proof by cases on pᵗ: if pᵗ = 0 then Cᵗ = 1; if pᵗ = 1 then Dᵗ = 1). So deriving ⊥ genuinely proves the set unsatisfiable — resolution is **sound**.
+
+## 9.3 Resolution strategies
+
+The order in which clauses are resolved greatly affects how fast ⊥ is found. Two common strategies:
+
+- **Set-of-Support.** Partition the clauses into a consistent **auxiliary set** (the premises — usually consistent, so a contradiction can only come from the negated conclusion) and a **set of support** (initially the **negated conclusion**). Every resolution must use **at least one** clause from the set of support (never resolve two auxiliary clauses together); add each resolvent to the set of support. *Theorem:* set-of-support resolution is **complete**.
+- **Davis–Putnam Procedure (DPP)** — below.
+
+## 9.4 The Davis–Putnam Procedure (DPP)
+
+Treat each clause as a **set of literals** (order and duplicates don't matter, so the set determines the clause). The resolvent of C ∪ {p} and D ∪ {¬p} is **[(C ∪ {p}) ∪ (D ∪ {¬p})] \ {p, ¬p}**.
+
+> [!note] DPP — eliminate one proposition symbol at a time
+> Input: a non-empty set S of clauses over symbols p₁, …, pₙ. To **eliminate** a symbol p:
+> 1. **Discard tautological clauses** — any clause containing both q and ¬q (it can never lead to a contradiction).
+> 2. Choose a symbol p; **add every possible resolvent on p** (resolve each pair C ∪ {p}, D ∪ {¬p}; parents may be re-used).
+> 3. **Discard every parent clause** that contains p or ¬p.
+> 4. **Discard duplicate clauses.**
+>
+> Repeat until no symbols remain.
+
+> [!success] Reading the DPP output
+> DPP ends with exactly one of two results:
+> - **{⊥}** (the empty clause) → the clause set is **unsatisfiable** → (if S = premises + ¬conclusion) the argument is **valid**.
+> - **∅** (empty *set* of clauses) → the set is **satisfiable** → the argument is **invalid**. (An empty conjunction of clauses is an n-ary ∧ with n = 0, i.e. the identity 1 — satisfiable.)
+
+**Example (valid).** DPP on {¬p, q}, {¬q, ¬r, s}, {p}, {r}, {¬s}: eliminate p → {q}, {¬q, ¬r, s}, {r}, {¬s}; eliminate q → {¬r, s}, {r}, {¬s}; eliminate r → {s}, {¬s}; eliminate s → **{⊥}** → unsatisfiable.
+
+**Example (invalid) — affirming the consequent** (r → w, w ⊢ r): input clauses {¬r, w}, {w}, {¬r} (the last from the negated conclusion ¬r). Eliminate w → {¬r}; eliminate r → **∅** (no clauses) → satisfiable → the argument is **invalid**. (So, unlike the 11-rule system, DPP/resolution *can* exhibit invalidity.)
+
+> [!abstract] Soundness & Completeness of DPP
+> For a finite clause set S: **S is unsatisfiable iff DPP outputs {⊥}.** Resolution preserves satisfiability **forwards** (parents → resolvent: soundness of resolution) and **backwards** (a satisfiable resolvent's parents are satisfiable by extending the valuation to p). Hence DPP decides satisfiability — and therefore argument validity — exactly. *(Proofs optional.)*
+
+> [!summary] Learning objectives (Topic 9)
+> Know **resolution** as the single rule of an alternative deduction system; **consistent** vs **satisfiable** and their connection; **parent clauses / resolvent / empty clause ⊥**; how to prove resolution is **sound**; how to **pre-process** (to CNF) and prove validity by **refutation**; the **set-of-support** strategy; the **set notation** for clauses and the **Davis–Putnam Procedure (DPP)** for deciding validity/invalidity; and the statement of the **Soundness & Completeness of DPP**.
 
 ---
 
@@ -940,13 +1176,14 @@ Key terms, grouped by chapter. Symbols: ¬ not · ∧ and · ∨ or · → impli
 
 - **n-ary connective count** — 2^(2ⁿ) distinct n-ary connectives (4 unary, 16 binary, 256 ternary).
 - **Adequate (functionally complete) set** — can express every Boolean function.
-- **Post's result** — {¬, ∧, ∨} is adequate (via the DNF construction); shrink to {¬, ∧} or {¬, ∨} by De Morgan.
+- **Post / adequacy** — Post (1921): the five standard connectives are adequate; the DNF construction gives the smaller **{¬, ∧, ∨}**; shrink further to **{¬, ∧}**, **{¬, ∨}**, or **{¬, →}**.
 - **Sheffer stroke (NAND, ↑) / Peirce arrow (NOR, ↓)** — each is adequate on its own; ¬A = A ↑ A = A ↓ A.
-- **Proving inadequacy** — e.g. {∧, ∨}: under the all-true valuation every formula is 1, so ¬p is inexpressible.
+- **Proving inadequacy** — exhibit a property every S-formula has but some standard connective lacks: e.g. {∧} can't build ¬ (an ∧-only formula on p is 0 when pᵗ = 0, unlike ¬p).
 - **Boolean algebra** — (D, +, ·, ‾, 0, 1) with commutativity, associativity, mutual distributivity, identities, and complements.
 - **Models of a Boolean algebra** — formulas mod ≡ (+ = ∨, · = ∧); the power set of a set (+ = ∪, · = ∩).
 - **Logic gate / transistor** — physical realization of a connective; a transistor is a voltage-controlled switch.
 - **Bubble-pushing** — De Morgan drawn on a circuit (a bubble = negation), e.g. to make an all-NAND design.
+- **Toffoli gate (CCNOT)** — 3-in / 3-out reversible gate T(x, y, z) = (x, y, z ⊕ (x∧y)); universal (gives {∧, ¬}); realizable with quantum gates.
 
 ### Topic 7 — Combinational Circuits & Adders
 
@@ -955,6 +1192,33 @@ Key terms, grouped by chapter. Symbols: ¬ not · ∧ and · ∨ or · → impli
 - **Majority vote (of 3)** — maj(x, y, z) = xy ∨ xz ∨ yz (minimized from the 4-minterm DNF).
 - **Parity / XOR** — a multi-way switch: out = x₁ ⊕ … ⊕ xₙ (linear with XOR; the DNF is exponential).
 - **Positional / base-2** — e.g. 14 = 1110₂; add/multiply with the grade-school algorithms.
-- **Half adder** — sum = x ⊕ y, carry = x ∧ y. **Full adder** — two half adders + OR; sum = x ⊕ y ⊕ cᵢₙ, cₒᵤₜ = xy ∨ cᵢₙ(x ⊕ y).
+- **Half adder** — sum = x ⊕ y, carry = x ∧ y. **Full adder** — two half adders + OR; sum = x ⊕ y ⊕ cᵢₙ, cₒᵤₜ = xy ∨ cᵢₙ(x ⊕ y) = **majority(x, y, cᵢₙ)**.
 - **Ripple-carry adder** — chained full adders. **Carry-lookahead** — a faster adder (not examinable).
 - **Dead-code elimination / condition simplification** — compilers apply the same Boolean minimization to code.
+
+### Topic 8 — Formal Deduction
+
+- **Formal deducibility Σ ⊢ A** — A is provable from premises Σ using the 11 syntactic rules; a metalanguage relation (⊢ is not a connective, unlike →).
+- **The 11 rules** — Ref; (+) add premises; (¬−) ¬-elim; (→−) →-elim / modus ponens; (→+) →-intro; (∧−), (∧+); (∨−) proof by cases; (∨+); (↔−), (↔+). Each is a scheme.
+- **Formal proof** — a finite sequence of lines, each generated by a rule (or a previously-proved theorem), ending in Σ ⊢ A; cited lines need not be consecutive.
+- **(∈) membership** — if A ∈ Σ then Σ ⊢ A (used "for free" once proved).
+- **Finiteness of premises** — if Σ ⊢ A then some finite Σ⁰ ⊆ Σ has Σ⁰ ⊢ A.
+- **Transitivity (Tr.)** — if Σ ⊢ each Aᵢ and A₁, …, Aₙ ⊢ A, then Σ ⊢ A (chain theorems).
+- **Reductio ad absurdum (¬+)** — if Σ, A ⊢ B and Σ, A ⊢ ¬B then Σ ⊢ ¬A (¬-introduction); weaker than (¬−).
+- **Syntactic equivalence A ⊣⊢ B** — A ⊢ B and B ⊢ A; **Replaceability (Repl.)** lets you swap equivalents inside a formula.
+- **Formally provable** — ∅ ⊢ A (e.g. excluded middle A ∨ ¬A, non-contradiction ¬(A ∧ ¬A)).
+- **Soundness** — Σ ⊢ A ⇒ Σ ⊨ A ("nothing but the truth"). **Completeness** — Σ ⊨ A ⇒ Σ ⊢ A ("the whole truth").
+- **Cannot prove invalidity** — ⊢ shows only validity; invalidity needs a semantic counterexample (fallacies: denying the antecedent, affirming the consequent).
+
+### Topic 9 — Resolution
+
+- **Resolution** — the single rule: (C ∨ p), (D ∨ ¬p) ⊢ᵣ (C ∨ D); resolve over p (J.A. Robinson, 1965).
+- **Disjunctive clause** — an ∨ of literals; the only input resolution accepts (convert formulas to CNF first).
+- **Parent clauses / resolvent** — the two inputs / the output clause of one resolution step.
+- **Empty clause ⊥** — result of resolving p with ¬p; always false; signals unsatisfiability.
+- **⊢ᵣ** — derivability by (repeated) resolution.
+- **Refutation** — prove A₁, …, Aₙ ⊨ C by deriving ⊥ from {A₁, …, Aₙ, ¬C} (showing it unsatisfiable).
+- **Consistent** — no F with both Σ ⊢ F and Σ ⊢ ¬F; satisfiable iff consistent (when ⊢ is sound & complete).
+- **Set-of-support strategy** — every resolution uses ≥ 1 clause from the set of support (initially ¬conclusion); keeps search focused; complete.
+- **Davis–Putnam Procedure (DPP)** — eliminate symbols one by one: drop tautological clauses, add all resolvents on p, discard parents with p/¬p, drop duplicates.
+- **DPP outputs** — {⊥} → unsatisfiable → argument **valid**; ∅ (no clauses) → satisfiable → argument **invalid**.

@@ -597,8 +597,8 @@ Let $A=\{\text{sum }10\}$, $B=\{\text{first die }6\}$, $C=\{\text{sum }7\}$. Rec
 
 7 letters: 1 E, 2 A's, 2 C's, 2 R's → total arrangements $\frac{7!}{2!\,2!\,2!} = 630$. The word **given** in a question signals a **conditional probability**.
 
-**1. $P(\text{word ends in "R"} \mid \text{word starts with "ACE"})$.** Fix ACE at the front; the remaining letters are A, C, R, R (4 letters, two R's). Directly:
-$$P(R\mid A) = \frac{3!/2!}{4!/2!} = \frac{3}{12} = \frac12.$$
+**1. $P(\text{word ends in "R"} \mid \text{word starts with "ACE"})$.** Fix ACE at the front; the remaining letters are A, C, R, R (4 letters, two R's), giving $4!/2! = 12$ equally likely arrangements. For the word to **end in R**, fix one R in the last slot and arrange the other three letters A, C, R (now all distinct) in $3! = 6$ ways. Directly:
+$$P(R\mid A) = \frac{3!}{4!/2!} = \frac{6}{12} = \frac12.$$
 *Quick argument:* 2 of the 4 remaining letters are R, so $P = 2/4 = 1/2$.
 
 **2. Is "starts with ACE" independent of "ends with R"?** Compute the unconditional $P(\text{ends in R})$: 2 of the 7 letters are R, so $P(R) = 2/7$. Since
@@ -1030,7 +1030,7 @@ On average you lose about **95¢ per ticket** — the expected gross payout is o
 > [!warning] A distribution without an expectation
 > Expectation doesn't always exist. If $f(x) = \tfrac{6}{\pi^2}\cdot\tfrac{1}{x^2}$ for $x = 1,2,3,\dots$ (a valid pmf, since $\sum \tfrac{1}{x^2} = \tfrac{\pi^2}{6}$), then
 > $$E(X) = \sum_{x=1}^\infty x\cdot\tfrac{6}{\pi^2}\tfrac{1}{x^2} = \tfrac{6}{\pi^2}\sum_{x=1}^\infty \tfrac1x = +\infty$$
-> (the harmonic series diverges). So $E(X) = +\infty$ — no finite mean.
+> (the harmonic series diverges). So $E(X) = +\infty$ — no finite mean. (Summing to 1 makes it a *valid* pmf; a finite expectation is a **separate** requirement that can fail.) The **Cauchy distribution** is a famous example used in later courses that likewise has no expectation.
 
 ### Expectation of a function: $E[g(X)]$
 
@@ -1040,7 +1040,7 @@ On average you lose about **95¢ per ticket** — the expected gross payout is o
 
 ### Example — $E|X|$ (toy)
 
-$E|X| = |-4|\cdot\tfrac16 + |0|\cdot\tfrac36 + |7|\cdot\tfrac26 = \tfrac46 + 0 + \tfrac{14}{6} = \tfrac{18}{6} = 3.$
+$E|X| = |-4|\cdot\tfrac16 + |0|\cdot\tfrac36 + |7|\cdot\tfrac26 = \tfrac46 + 0 + \tfrac{14}{6} = \tfrac{18}{6} = 3.$ Also notice $E|X| = 3 \ne |E(X)| = \left|\tfrac53\right| = \tfrac53$ — another reminder that a nonlinear transform doesn't commute with expectation.
 
 ### Example — $E[X^2]$ for a die ($g(x) = x^2$)
 
@@ -1052,6 +1052,17 @@ $E[X^2] = \sum x^2\cdot\tfrac16 = \tfrac{1+4+9+16+25+36}{6} = \tfrac{91}{6} \app
 > For constants $c_1,\dots,c_n$ and functions $g_1,\dots,g_n$:
 > $$E\!\left[\sum_{i=1}^n c_i\, g_i(X)\right] = \sum_{i=1}^n c_i\, E[g_i(X)].$$
 > **Linear-function corollary:** $E(aX + b) = a\,E(X) + b$.
+
+**Proof sketch (watch the technique, not the result).** Let $h(X) = \sum_{i=1}^n c_i\, g_i(X)$ and apply LOTUS to $h$:
+
+$$E\!\left[\sum_i c_i g_i(X)\right] = E[h(X)] = \sum_{x\in A} h(x)f(x) = \sum_{x\in A}\sum_{i=1}^n c_i g_i(x) f(x) \overset{\text{reorder}}{=} \sum_{i=1}^n c_i \sum_{x\in A} g_i(x) f(x) = \sum_{i=1}^n c_i\, E[g_i(X)].$$
+
+The key moves: **swap the order of the two sums** (one runs over the range $x\in A$, the other over the functions $i$), then **pull the constant $c_i$ out** of the inner sum, which leaves the definition of $E[g_i(X)]$.
+
+> [!note] Expectation of a constant
+> $E[c] = c$ for any constant $c$: $E[c] = \sum_{x\in A} c\,f(x) = c\sum_{x\in A} f(x) = c\cdot 1 = c$ (the pmf sums to 1).
+
+**Corollary derivation.** Take $c_1 = a$, $g_1(x) = x$ and $c_2 = b$, $g_2(x) = 1$. Then $E(aX+b) = a\,E[X] + b\,E[1] = aE(X) + b$ (using $E[1]=1$).
 
 > [!danger] Nonlinear $g$: $E[g(X)] \ne g(E[X])$
 > Linearity only passes **constants** through. For nonlinear $g$, in general $g(E[X]) \ne E[g(X)]$ — e.g. for the die $E[X^2] = \tfrac{91}{6} \approx 15.17$ but $(E X)^2 = 12.25$.
@@ -1123,7 +1134,7 @@ Key terms, grouped by chapter. Symbols: $S$ sample space · $\bar A$ complement 
 - **Function of an RV $Y=g(X)$** — pmf $f_Y(y)=\sum_{x:\,g(x)=y}f_X(x)$; if $g$ injective, $f_Y(y)=f_X(g^{-1}(y))$; linear $Y=aX+b$ → $f_X((y-b)/a)$.
 - **Expectation / mean / first moment** — $\mu=E(X)=\sum x f(x)$; probability-weighted average / balancing point / long-run average (LLN); need not be in the range; may be $+\infty$.
 - **LOTUS** — $E[g(X)]=\sum g(x)f(x)$ (no need for $g(X)$'s pmf).
-- **Linearity of expectation** — $E[\sum c_i g_i(X)]=\sum c_i E[g_i(X)]$; $E(aX+b)=aE(X)+b$; but $g(E[X])\ne E[g(X)]$ for nonlinear $g$.
+- **Linearity of expectation** — $E[\sum c_i g_i(X)]=\sum c_i E[g_i(X)]$; $E(aX+b)=aE(X)+b$ (proof: swap sum order, pull out the constant); $E[c]=c$ for a constant; but $g(E[X])\ne E[g(X)]$ for nonlinear $g$ (e.g. $E|X|\ne|E(X)|$, $E[X^2]\ne(E X)^2$).
 - **Key series** — geometric $\sum r^i = 1/(1-r)$, partial geometric $\sum_{i=0}^{n} r^i = (1-r^{n+1})/(1-r)$, binomial theorem, Taylor series for $e^x$ (used to sum pmf's / find means).
 
 ---

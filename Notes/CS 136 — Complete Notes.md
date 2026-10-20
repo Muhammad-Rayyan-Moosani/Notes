@@ -16,7 +16,8 @@ term: Fall 2026
 1. [[#Topic 1 — Functional C|Topic 1 — Functional C]] — history & C99, compilation & files, `main` & exit codes, `printf`/tracing, operators, octal trap, static typing, identifiers & style, declarations vs definitions, booleans, the design recipe & `assert`, control flow, recursion (simple/accumulative/mutual)
 2. [[#Topic 2 — Imperative C|Topic 2 — Imperative C]] — functional vs imperative, side effects & `effects:`, `printf`/`scanf` I/O, variables/mutation/`const`, scope & purity, expression statements, testing (streams, harnesses, terminology)
 3. [[#Topic 3 — The C Model|Topic 3 — The C Model]] — control-flow model, loops & `break`/`continue`, iteration↔recursion, memory (bits/`sizeof`/overflow), `char`/ASCII, `struct`, the five memory sections, **call stack & stack frames** (pass-by-value), and drawing a **memory snapshot**
-4. [[#Glossary|Glossary]] — key terms, grouped by chapter
+4. [[#Topic 4 — Pointers|Topic 4 — Pointers]] — the address operator `&`, pointers & pointer types, `NULL`, `sizeof` a pointer, the dereference operator `*`, the arrow operator `->`, and **aliasing**
+5. [[#Glossary|Glossary]] — key terms, grouped by chapter
 
 ### How to read these notes
 
@@ -1078,6 +1079,234 @@ low   Code │ Read-Only Data │ Global Data │ Heap  ↓ … ↑  Stack   hig
 
 ---
 
+# Topic 4 — Pointers
+
+> [!abstract] Goal & objectives
+> **Primary goal:** use **pointers** in C. By the end you should be able to:
+> - **define and dereference** pointers; use the new operators **`&`**, **`*`**, **`->`**;
+> - **describe aliasing**; use **`scanf`** to read input;
+> - use **pointers to structures as parameters** (and explain why parameters are often struct pointers);
+> - explain **when a pointer parameter should be `const`**; use **function pointers**.
+>
+> *Optional readings: CP:AMA 11, 17.7.* Pointers are **fundamental** to C and reappear in arrays (§5), dynamic memory (§8), and linked structures / lists & trees (§9). *(Notes so far cover 4.1 — Introduction; 4.2–4.4 to follow.)*
+
+## 4.1 The Address Operator (`&`)
+
+C was designed to give programmers **"low-level" access to memory** and to **expose the underlying memory model**.
+
+> [!success] `&` — the address operator
+> `&x` produces the **location** (the **starting address**) of an identifier in memory. The `printf` specifier **`%p`** displays an address (in **hex**).
+
+```c
+// Example 4.1.1 — the address operator
+#include "cs136.h"
+int g = 42;
+
+int main(void) {
+  printf("the value of g is %d\n", g);     // 42
+  printf("the address of g is %p\n", &g);  // e.g. 0x55f... (hex)
+}
+```
+
+## 4.2 Pointers & Pointer Types
+
+> [!success] What a pointer is
+> A **pointer is a variable that stores a memory address.** Define one by placing a **star `*`** before the identifier. A pointer's **type is the type of the data it points at** — for every type `T` there is a pointer type `T *`.
+
+- `int *pi` — an **integer pointer** (`int *`): stores the address of an `int`.
+- `char *pc` — a **character pointer** (`char *`).
+- `struct posn *pp` — a **`struct posn` pointer**.
+
+```c
+// Example 4.1.2 — pointer types
+#include "cs136.h"
+struct posn { int x; int y; };
+
+int main(void) {
+  int i;                  // i is an int [uninitialized]
+  i = 42;
+  char c = 'z';
+  struct posn p1 = {3, 4};
+
+  int *pi;                // pi is a pointer to an int [uninitialized]
+  pi = &i;                // pi now stores the address of i ("pi points at i")
+  char *pc = &c;          // pc points at c
+  struct posn *pp = &p1;  // pp points at p1
+
+  printf("i = %d, address %p\n", i, pi);
+  printf("c = %c, address %p\n", c, pc);
+  printf("address of the struct posn is %p\n", pp);
+}
+```
+
+## 4.3 Pointer Initialization & Style
+
+> [!warning] The `*` belongs to the name, not the type
+> In a definition the `*` is **part of the declarator**, not part of the variable name — the variable above is `q`, **not** `*q`. C ignores whitespace, so these are identical:
+> ```
+> int *p = &i;   // style A  ← used in this course & CP:AMA
+> int * p = &i;  // style B
+> int* p = &i;   // style C
+> ```
+> Style A makes **multiple definitions** unambiguous:
+> ```
+> int *p1 = &i, *p2 = &j;   // VALID: both are pointers
+> int * p1 = &i, p2 = &j;   // INVALID: p2 is NOT a pointer, just an int
+> ```
+
+```c
+// Example 4.1.3 — pointer initialization
+#include "cs136.h"
+int main(void) {
+  int i = 42;
+  int *p = &i;    // p defined AND initialized
+
+  int *q;         // q defined [uninitialized]
+  q = &i;         // q now points at i
+
+  //*q = &q;      // "q points at q"? — type error (see §4.4)
+
+  int *p1 = &i;   // p1 points at i
+  int **p2 = &p1; // p2 points at p1  (pointer to a pointer)
+}
+```
+
+## 4.4 Pointers to Pointers
+
+- **Can a pointer point at itself?** No. `*q = &q;` is a **type error**: `q` has type `int *` (it can only point at an `int`), but `q` itself is **not** an `int`.
+- You *can* have a **pointer to a pointer**: `int **p2 = &p1;` — the type of `p2` is **`int **`** ("pointer to a pointer to an int"). C allows any number of levels, but **more than two is uncommon**.
+- A **`void *`** (void pointer) can point at **anything**, including itself — covered in the last module.
+
+## 4.5 Pointer Values & `NULL`
+
+A pointer is an ordinary **variable storing a value** — it's only "special" because that value is an **address**. So a pointer **also has its own address**.
+
+> [!note] Pointer diagram (recreated from the course)
+> `int i = 42; int *p = &i;` — the **value of `p`** equals the **address of `i`**, but the **address of `p`** is different. We usually don't care about the numeric address and just draw an **arrow**:
+> ```
+>        +------+
+>   p ──▶ |  42  |  i     (p "points at" i; *p is 42)
+>        +------+
+>   p has its own, different address (&p)
+> ```
+
+> [!success] `NULL` — "points at nothing"
+> `NULL` is a special pointer value meaning the pointer points at **nothing**. If a pointer's target is unknown at definition, or becomes invalid, **assign it `NULL`** (a "NULL pointer"). `int *p1 = NULL;` is **much better style** than an uninitialized `int *p;` (which warns in edX).
+
+> [!tip] `NULL` is false
+> In C `false` is `0`, and **`NULL` is also "false"** in a Boolean context. So `if (p)` is equivalent to `if (p != NULL)` — both are good style. A pointer's value can be **mutated** with `=` like any variable (`p2 = &j;` then `p2 = NULL;` then `p2 = &i;`).
+
+```c
+// Example 4.1.4 — pointer values and NULL (abridged)
+int i = 42;
+int *p = &i;
+trace_ptr(&i);          // address of i
+trace_ptr(p);           // same address (p's value)
+trace_ptr(&p);          // DIFFERENT — p's own address
+
+int *p1 = NULL;         // GOOD style
+if (p1 != NULL) { /* ... */ } else { printf("p1 is NULL!\n"); }
+```
+
+## 4.6 `sizeof` a Pointer
+
+> [!note] All pointers are the same size
+> On a **k-bit** system, addresses are **k bits**, so a pointer needs **k bits**. In the 64-bit edX environment **`sizeof` any pointer is 8 bytes (64 bits)** — **regardless** of the type it points at (`sizeof(int *) == sizeof(char *)`).
+
+## 4.7 The Dereference Operator (`*`)
+
+> [!success] `*` — dereference (indirection), the inverse of `&`
+> **`*p` produces the value of what `p` points at.** Since `&` "gets the address of this box", `*` "**follows the arrow to the next box and gets its contents**". So `*&i` (and even `*&*&*&i`) is just the value of `i`.
+
+- **Dereferencing `NULL` crashes** your program.
+- The `*` symbol has **three distinct uses** in C: **multiplication** (`i * i`), **pointer definitions/types** (`int *p`), and **dereference** (`*p`).
+
+```c
+// Example 4.1.5 — sizeof and the dereference operator
+#include "cs136.h"
+int main(void) {
+  trace_int(sizeof(int *));   // 8 (bytes)
+  trace_int(sizeof(char *));  // 8  — * in a pointer TYPE
+
+  int i = 42;
+  int *p = &i;                // * in a pointer DEFINITION
+  trace_int(*p);              // 42 — * as DEREFERENCE
+
+  p = NULL;
+  // trace_int(*p);           // dereferencing NULL → crash
+
+  int k = i * i;              // * as MULTIPLICATION
+  trace_int(k);              // 1764
+}
+```
+
+## 4.8 Dereferencing Pointers to Structures (`->`)
+
+The field-selection operator `.` has **higher precedence** than `*`, so reaching a field through a struct pointer needs awkward parentheses: **`(*ptr).field`**. The **arrow operator `->`** combines dereference + selection:
+
+> [!success] `ptr->field` ≡ `(*ptr).field`
+> Use the **arrow `->`** — it's less awkward than `(*ptr).field`.
+
+```c
+// Example 4.1.6 — the dereference-selection ("arrow") operator
+#include "cs136.h"
+struct posn { int x; int y; };
+int main(void) {
+  struct posn my_posn = {0, 0};
+  struct posn *ptr = &my_posn;
+
+  (*ptr).x = 3;   // awkward
+  ptr->y = 4;     // much better
+  trace_int(ptr->x);  // 3
+  trace_int(ptr->y);  // 4
+}
+```
+
+## 4.9 Aliasing
+
+> [!warning] Aliasing
+> **Aliasing** occurs when the **same memory address can be reached through more than one pointer**. The key is distinguishing changing the **pointer** (`p = q;`) from changing **what it points at** (`*p = *q;`).
+
+**`p = q;` — pointer assignment** ("change `p` to point at what `q` points at"): copies `q`'s *value* (an address) into `p`. The pointed-at data is untouched.
+
+> ```
+> int i = 5, j = 6;  int *p = &i;  int *q = &j;
+>
+> before  p = q;                 after  p = q;
+>   i: 5  ◀── p                    i: 5            (i unchanged)
+>   j: 6  ◀── q                    j: 6  ◀── p, q  (p now points at j)
+> ```
+
+**`*p = *q;`** — changes the **value of what `p` points at** (not `p` itself):
+
+> ```
+> p = &i;  *p = *q;              (p points at i, q points at j)
+>
+> before  *p = *q;               after  *p = *q;
+>   i: 5  ◀── p                    i: 6  ◀── p   (i becomes j's value, 6)
+>   j: 6  ◀── q                    j: 6  ◀── q   (p unchanged — still points at i)
+> ```
+
+```c
+// Example 4.1.7 — aliasing (abridged)
+int i = 5, j = 6;
+int *p = &i;
+int *q = &j;
+
+p = q;      // p's address changes; i does NOT   → p,q point at j; i == 5
+p = &i;
+*p = *q;    // i changes to 6; p does NOT         → i == 6
+
+int *p1 = &i;
+int *p2 = p1;     // p1 and p2 alias i
+int **p3 = &p1;
+*p1  = 10;        // i == 10
+*p2  = 100;       // i == 100  (via a different alias)
+**p3 = 1000;      // i == 1000 (same as *(*p3))
+```
+
+---
+
 # Glossary
 
 *Key terms per chapter. Jump to a term's chapter for the full treatment.*
@@ -1182,3 +1411,16 @@ low   Code │ Read-Only Data │ Global Data │ Heap  ↓ … ↑  Stack   hig
 - **Uninitialized memory** — global → auto **0**; local → **garbage** (leftover from a previous frame).
 - **Memory snapshot** — show global/RO separate from stack; include all locals (not-yet-reached / out-of-scope = **`???`**); skip temporaries; a loop variable has **one** slot, re-initialized each pass.
 - **Scope ≠ memory** — scope = syntax (visibility); memory = model; a variable stays in its frame (shown `???` when out of scope) until the frame pops.
+
+## Topic 4 — Pointers
+
+- **Address operator `&`** — `&x` gives the **address** (location) of `x`; print an address with `%p` (hex).
+- **Pointer** — a **variable that stores a memory address**; defined with a **`*`** before the name.
+- **Pointer type** — `T *` points at data of type `T` (`int *`, `char *`, `struct posn *`); the `*` belongs to the **name**, not the type (`int *p1, *p2;`).
+- **Style** — `int *p` (style A, used here) = `int * p` = `int* p`; in multi-definitions each pointer needs its own `*`.
+- **Pointer to pointer** — `int **p` ("pointer to a pointer to an int"); a pointer **can't point at itself** (type error); `void *` points at anything (later).
+- **`NULL`** — pointer value meaning "**points at nothing**"; initialize unknown pointers to `NULL` (not uninitialized); `NULL` is **false**, so `if (p)` ≡ `if (p != NULL)`.
+- **`sizeof` a pointer** — same size for **all** pointer types (8 bytes / 64 bits in the edX environment), regardless of the pointed-at type.
+- **Dereference `*`** — `*p` = the **value** `p` points at (inverse of `&`); `*&i` = `i`; dereferencing `NULL` **crashes**. `*` has **3 uses**: multiply, pointer def/type, dereference.
+- **Arrow `->`** — `ptr->field` ≡ `(*ptr).field` (needed because `.` binds tighter than `*`); prefer `->`.
+- **Aliasing** — the same address reachable via **>1 pointer**. `p = q;` changes **which box `p` points at** (data untouched); `*p = *q;` changes **the value in the box `p` points at** (`p` untouched).
