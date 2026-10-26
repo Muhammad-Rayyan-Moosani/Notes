@@ -735,7 +735,7 @@ $$P(\text{win} \mid \text{switch}) = 0\cdot\tfrac13 + 1\cdot\tfrac13 + 1\cdot\tf
 # Chapter 3 — Univariate Discrete Probability Distributions
 
 > [!abstract] Goal
-> Move from events to **random variables**: functions that turn outcomes into numbers. Describe a discrete RV with its **pmf** and **CDF**, transform one RV into another ($Y = g(X)$), and summarize a distribution with its **expectation**.
+> Move from events to **random variables**: functions that turn outcomes into numbers. Describe a discrete RV with its **pmf** and **CDF**, transform one RV into another ($Y = g(X)$), summarize a distribution with its **expectation, variance, and moment generating function**, and recognize the **named distributions** (discrete uniform, Bernoulli, binomial, …).
 
 **Roadmap:** 3.1 Discrete Random Variables · 3.2 Functions of Random Variables · 3.3 Expectation · 3.4 Moment Generating Functions · 3.5 Special Discrete Distributions.
 
@@ -1067,8 +1067,202 @@ The key moves: **swap the order of the two sums** (one runs over the range $x\in
 > [!danger] Nonlinear $g$: $E[g(X)] \ne g(E[X])$
 > Linearity only passes **constants** through. For nonlinear $g$, in general $g(E[X]) \ne E[g(X)]$ — e.g. for the die $E[X^2] = \tfrac{91}{6} \approx 15.17$ but $(E X)^2 = 12.25$.
 
+### Special expected values — measuring spread
+
+Expectation gives the *center*; we also want how far $X$ typically **deviates** from its mean $\mu = E(X)$:
+
+- **Deviation** $E[X - \mu] = E[X] - \mu = \mu - \mu = 0$ — always 0 (positive and negative deviations cancel), so useless as a spread measure.
+- **Absolute deviation** $E|X - \mu|$ — measures spread, but absolute values are awkward algebraically.
+- **Squared deviation** $E[(X - \mu)^2]$ — the workable choice. This is the **variance**.
+
+### Definition — Variance
+
+> [!success] Variance
+> $$\sigma^2 = \text{Var}(X) = E\big[(X - E[X])^2\big] = E\big[(X - \mu)^2\big].$$
+> A measure of the **spread** of a distribution around its mean; denoted $\sigma^2$.
+> **Shortcut:** $\text{Var}(X) = E[X^2] - \mu^2$.
+> **Alternative shortcut:** $\text{Var}(X) = E[X(X-1)] + \mu - \mu^2$ (sometimes $E[X(X-1)]$ is easier to find than $E[X^2]$).
+
+**Shortcut derivation** (expand the square, use linearity):
+$$\text{Var}(X) = E[X^2 - 2\mu X + \mu^2] = E[X^2] - 2\mu E[X] + \mu^2 = E[X^2] - 2\mu^2 + \mu^2 = E[X^2] - \mu^2.$$
+
+### Example — Variance of a die
+
+$X$ = fair die roll, $\mu = \tfrac{21}{6}$, $E[X^2] = \tfrac{91}{6}$ (from §3.3):
+$$\text{Var}(X) = E[X^2] - \mu^2 = \tfrac{91}{6} - \left(\tfrac{21}{6}\right)^2 = 15.167 - 12.25 = 2.917.$$
+
+### Variance properties
+
+> [!note] Properties of variance
+> 1. **Larger $\text{Var}(X)$ ⟹ more spread** around the mean.
+> 2. $\text{Var}(X) \ge 0$ always (since $(X-\mu)^2 \ge 0$).
+> 3. $\text{Var}(X) = 0$ **iff** $P(X = E[X]) = 1$ (a point mass — no randomness).
+> 4. Variance is on a **squared scale**, not the scale of $X$ and $\mu$.
+> 5. Consequence: $E[X^2] \ge \mu^2 = (E[X])^2$ (since $\text{Var}(X) = E[X^2] - \mu^2 \ge 0$).
+
+### Definition — Standard Deviation
+
+> [!success] Standard deviation
+> $$\sigma = SD(X) = \sqrt{\text{Var}(X)} = \sqrt{E[(X-\mu)^2]}.$$
+> The square root restores the **same scale** as $X$. Die: $SD(X) = \sqrt{2.917} \approx 1.7$.
+
+### Variance of a linear transformation
+
+> [!success] Var and SD of $aX + b$
+> $$\text{Var}(aX + b) = a^2\,\text{Var}(X), \qquad SD(aX + b) = |a|\,SD(X).$$
+> **Shifting by $b$ doesn't change spread**; scaling by $a$ scales variance by $a^2$.
+
+**Proof.** With $Y = aX+b$, $E[Y] = aE[X]+b$, so
+$$\text{Var}(Y) = E[(Y - E[Y])^2] = E[(aX + b - aE[X] - b)^2] = E[a^2(X - E[X])^2] = a^2\,\text{Var}(X).$$
+(The $+b$ cancels — a shift moves the whole distribution but doesn't spread it.)
+
 > [!abstract] Summary — §3.3
-> The **expectation** $\mu = E(X) = \sum x\,f(x)$ is the probability-weighted average (balancing point; the long-run average by the law of large numbers), need not lie in the range, and can even be infinite. For a function, **$E[g(X)] = \sum g(x)\,f(x)$** (no need for $g(X)$'s pmf). Expectation is **linear**: $E[\sum c_i g_i(X)] = \sum c_i E[g_i(X)]$ and $E(aX+b) = aE(X)+b$ — but $g(E[X]) \ne E[g(X)]$ for nonlinear $g$.
+> **Expectation** $\mu = E(X) = \sum x f(x)$ is the weighted-average center (balancing point / long-run average); $E[g(X)] = \sum g(x)f(x)$; **linear**: $E[\sum c_i g_i(X)] = \sum c_i E[g_i(X)]$ and $E(aX+b)=aE(X)+b$; but $g(E[X])\ne E[g(X)]$ for nonlinear $g$. **Variance** $\sigma^2 = \text{Var}(X) = E[(X-\mu)^2] = E[X^2]-\mu^2$ measures spread (always $\ge 0$; zero only for a point mass; squared scale); **standard deviation** $\sigma = \sqrt{\text{Var}(X)}$ restores the original scale. Under a linear map, $\text{Var}(aX+b) = a^2\text{Var}(X)$, $SD(aX+b)=|a|SD(X)$.
+
+## 3.4 Moment Generating Functions
+
+### Moments
+
+> [!note] The $n$-th moment
+> For a random variable $X$, $E[X^n]$ ($n = 1, 2, 3, \dots$) is the **$n$-th moment** of $X$.
+> - **1st moment** $E[X] = \mu$ — the **mean** (central tendency).
+> - **2nd moment** $E[X^2]$ — gives the **variance** $\sigma^2 = E[X^2] - \mu^2$ (spread).
+> - **3rd moment** → **skewness** $\tilde\mu_3 = E\!\left[\left(\tfrac{X-\mu}{\sigma}\right)^3\right] = \dfrac{E[X^3] - 3\mu\sigma^2 - \mu^3}{\sigma^3}$ (asymmetry: positive skew = long right tail, negative = long left tail).
+> - **4th moment** → **kurtosis** (heaviness of the tails).
+
+The **moment generating function** packages *all* the moments into one function.
+
+### Definition — Moment Generating Function (MGF)
+
+> [!success] Moment Generating Function
+> For a discrete RV $X$ with range $A$ and pmf $f(x)$:
+> $$M(t) = E\!\left(e^{tX}\right) = \sum_{x \in A} e^{tx} f(x).$$
+> A function of $t$, required to be **finite on an open interval around 0** — i.e. $\exists\, a > 0$ with $\sum_{x\in A} e^{tx}f(x) < \infty$ for all $t \in (-a, a)$. (It's just $E[g(X)]$ with $g(x) = e^{tx}$.)
+
+> [!note] MGF properties
+> - **$M(0) = 1$** always: $M(0) = E[e^{0\cdot X}] = E[1] = 1$ (a sanity check).
+> - **Uniqueness:** the MGF determines the distribution — another way to show two RVs are identically distributed (useful for sums of RVs, §4.3).
+> - It **generates moments** (next).
+
+### Uniqueness Theorem
+
+> [!success] Uniqueness Theorem for MGFs
+> If $M_X(t) = M_Y(t)$ for all $t \in (-a,a)$ for some $a > 0$, then $X$ and $Y$ have the **same distribution**.
+> ⚠️ This needs the **whole function** to match — matching one derivative at 0 (one moment, hence same mean/variance) is **not** enough.
+
+### Connection between the MGF and moments
+
+> [!success] Moments from the MGF
+> $$E(X^n) = M^{(n)}(0) = \left.\frac{d^n}{dt^n} M(t)\right|_{t=0}, \qquad n = 1, 2, 3, \dots$$
+> The $n$-th moment is the **$n$-th derivative of $M$ at $t=0$** (differentiate first, *then* set $t=0$). This is where "moment generating" comes from.
+
+**Proof for $n = 1, 2$** (differentiate under the sum — swap $\tfrac{d}{dt}$ and $\sum$):
+$$M'(t) = \frac{d}{dt}\sum_x e^{tx} f(x) = \sum_x x\,e^{tx} f(x) = E[X e^{tX}] \;\Rightarrow\; M'(0) = E[X e^0] = E[X].$$
+$$M''(t) = \frac{d}{dt} E[X e^{tX}] = E[X^2 e^{tX}] \;\Rightarrow\; M''(0) = E[X^2].$$
+
+> [!tip] Why bother?
+> Sometimes $E[X]$, $E[X^2]$ and the variance are **hard via the pmf but easy via the MGF** — just differentiate and set $t=0$.
+
+### Example — MGF of the toy distribution
+
+$X \in \{-4, 0, 7\}$, $f = \tfrac16, \tfrac36, \tfrac26$:
+$$M(t) = e^{-4t}\tfrac16 + e^{0t}\tfrac36 + e^{7t}\tfrac26 = \tfrac36 + \tfrac16 e^{-4t} + \tfrac26 e^{7t}.$$
+Then $M'(t) = -\tfrac46 e^{-4t} + \tfrac{14}{6} e^{7t}$, so $E[X] = M'(0) = -\tfrac46 + \tfrac{14}{6} = \tfrac{10}{6}$ — matching the direct pmf calculation.
+
+### Example — MGF of the geometric (failures before the first six)
+
+$Y$ = number of non-sixes before the first six, $f_Y(y) = \tfrac16\left(\tfrac56\right)^y$, $y = 0,1,2,\dots$:
+$$M(t) = \sum_{y=0}^\infty e^{ty}\tfrac16\left(\tfrac56\right)^y = \tfrac16 \sum_{y=0}^\infty \left(\tfrac{5e^t}{6}\right)^y = \tfrac16\cdot\frac{1}{1 - \tfrac{5e^t}{6}} = \frac{1}{6 - 5e^t},$$
+a **geometric series**, valid when $\left|\tfrac{5e^t}{6}\right| < 1 \iff t < \log\tfrac65$. So the MGF exists on $-\log\tfrac65 < t < \log\tfrac65$ — a small open interval around 0, which is all we need.
+
+> [!note] "log" means natural log
+> In this course (and for mathematicians generally) $\log = \log_e = \ln$. Log base 10 is the exception, written explicitly.
+
+**Mean:** $M'(t) = \dfrac{5e^t}{(6-5e^t)^2}$, so $E[Y] = M'(0) = \dfrac{5}{(6-5)^2} = 5$.
+**Variance:** $M''(0) = 55$, so $\text{Var}(Y) = E[Y^2] - (E[Y])^2 = 55 - 5^2 = 30$.
+
+> [!tip] The interval around 0 can be tiny
+> The MGF only needs to exist in *some* open interval around 0, because we only ever evaluate it (and its derivatives) **at $t = 0$**. A narrow interval is fine.
+
+### MGF of a linear transformation
+
+> [!success] MGF of $Y = aX + b$
+> $$M_Y(t) = e^{bt}\,M_X(at).$$
+
+**Proof.** $M_Y(t) = E[e^{tY}] = E[e^{t(aX+b)}] = E[e^{bt}e^{(at)X}] = e^{bt}E[e^{(at)X}] = e^{bt}M_X(at)$ ($e^{bt}$ is constant, pulled out).
+
+**Example (toy, $Y = 2X+8$):** $M_Y(t) = e^{8t}M_X(2t) = e^{8t}\big[\tfrac36 + \tfrac16 e^{-8t} + \tfrac26 e^{14t}\big] = \tfrac36 e^{8t} + \tfrac16 + \tfrac26 e^{22t}$.
+
+**Example (total rolls until the first six):** $Y$ = failures before the six, $X = Y+1$ = total rolls ($a=1, b=1$): $M_X(t) = e^{t}M_Y(t) = \dfrac{e^t}{6 - 5e^t}$, and $E[X] = E[Y] + 1 = 6$.
+
+### When the MGF does not exist
+
+> [!warning] MGF existence
+> If $E[e^{tX}]$ isn't finite in any open interval around 0, the **MGF does not exist**. Two cases:
+> 1. **No moments exist either** (example below).
+> 2. **Moments exist but the MGF doesn't** (seen later, §5.3, continuous case).
+
+**Example — MGF does not exist.** $f(x) = \tfrac{6}{\pi^2 x^2}$, $x = 1,2,3,\dots$ (valid pmf; $E[X] = +\infty$ from §3.3). Its MGF would be $M(t) = \tfrac{6}{\pi^2}\sum_{x=1}^\infty \tfrac{e^{tx}}{x^2}$. From the **Taylor series** $e^z = 1 + z + \tfrac{z^2}{2} + \cdots > 1 + z$ for $z > 0$, we get $e^{tx} > 1 + tx$ for $t > 0$, so $E[e^{tX}] > 1 + tE[X]$. Since $E[X]$ diverges, $E[e^{tX}]$ diverges too (comparison test) — the **MGF does not exist**.
+
+> [!abstract] Summary — §3.4
+> The **MGF** $M(t) = E[e^{tX}] = \sum e^{tx}f(x)$ (finite in an open interval around 0, $M(0)=1$) has two main uses: (1) **generate moments** via $E[X^n] = M^{(n)}(0)$; (2) it is **unique**, so matching MGFs ⟹ same distribution. For a linear map, $M_{aX+b}(t) = e^{bt}M_X(at)$. It doesn't always exist.
+
+## 3.5 Special Discrete Distributions
+
+Rather than counting from first principles each time, we recognize recurring patterns as **named distributions**. For each we'll have a pmf, range, MGF, mean, and variance (provided on the midterm cheat sheet) — so the real skill is **recognizing which distribution applies**.
+
+> [!note] The seven named distributions
+> 3.5.1 **Discrete Uniform** · 3.5.2 **Binomial** · 3.5.3 Hypergeometric · 3.5.4 Geometric · 3.5.5 Negative Binomial · 3.5.6 Poisson · 3.5.7 Poisson Process. *(Hypergeometric onward: Midterm 2 and beyond.)*
+
+### 3.5.1 Discrete Uniform Distribution $X \sim DU(a,b)$
+
+> [!success] Discrete Uniform $DU(a,b)$
+> Every integer in $A = \{a, a+1, \dots, b\}$ (with $a \le b$) is **equally likely**.
+> - **pmf:** $f(x) = \dfrac{1}{b - a + 1}$ for $x = a, \dots, b$ (there are $b-a+1$ values).
+> - **CDF:** $F(x) = \dfrac{\lfloor x \rfloor - a + 1}{b - a + 1}$ for $a \le x < b$ (0 below $a$, 1 at/above $b$).
+> - **Mean:** $E[X] = \dfrac{a + b}{2}$ (the midpoint of the range).
+> - **Variance:** $\text{Var}(X) = \dfrac{(b-a+1)^2 - 1}{12} = \dfrac{(b-a)(b-a+2)}{12}$.
+> - **MGF:** $M(t) = \dfrac{e^{at} - e^{(b+1)t}}{(b-a+1)(1 - e^t)}$.
+
+**Examples:** roll a 6-sided die → $DU(1,6)$; draw a number 1–50 → $DU(1,50)$. A spinner with colours is *not* $DU$ unless you assign equally-likely numeric labels.
+
+**Mean derivation** (re-index to start at 1, with $y = x - a + 1$):
+$$E[X] = \sum_{x=a}^{b}\frac{x}{b-a+1} = \frac{1}{b-a+1}\sum_{y=1}^{b-a+1}(y + a - 1) = \frac{1}{b-a+1}\left[\frac{(b-a+1)(b-a+2)}{2} + (b-a+1)(a-1)\right] = \frac{a+b}{2}.$$
+Check: die $DU(1,6)$ gives $\tfrac{1+6}{2} = 3.5$. ✓
+
+**Example — Maximum of Five Dice.** Roll five fair dice; $X$ = the largest value. Let $Y_i$ = value of roll $i$, each $Y_i \sim DU(1,6)$ independent. For a **max**, go CDF-first ($\max \le x \iff$ all $\le x$):
+$$F_X(x) = P(X \le x) = \prod_{i=1}^5 P(Y_i \le x) = \left(\frac{x}{6}\right)^5, \quad x = 1,\dots,6,$$
+using the $DU(1,6)$ CDF $P(Y_i \le x) = x/6$. Difference to the pmf:
+$$f_X(x) = F_X(x) - F_X(x-1) = \left(\frac{x}{6}\right)^5 - \left(\frac{x-1}{6}\right)^5.$$
+*(Exercise: generalize to $n$ dice with $m$ sides.)*
+
+### 3.5.2 Bernoulli Distribution $X \sim \text{Ber}(p)$
+
+> [!success] Bernoulli trial $\text{Ber}(p)$
+> A **single** experiment with two outcomes — **success** (prob $p$) or **failure** (prob $1-p$).
+> - **Range:** $A = \{0, 1\}$ ($X = 1$ success, $X = 0$ failure — "success" is just a chosen label).
+> - **pmf:** $f(1) = p$, $f(0) = 1 - p$.
+> - **Mean:** $E[X] = 0(1-p) + 1(p) = p$.
+> - **Variance:** since $X^2 = X$ (values are 0/1), $E[X^2] = p$, so $\text{Var}(X) = p - p^2 = p(1-p)$.
+> - **MGF:** $M(t) = e^{0t}(1-p) + e^{t}p = (1-p) + pe^t$ (exists for all $t$).
+
+Example: a fair coin with head = 1 success → $\text{Ber}(0.5)$, expected points per flip $= 0.5$. Any yes/no event with a success probability works (not just $p=\tfrac12$).
+
+> [!example] Concept check — which is Bernoulli?
+> Number of heads in 10 flips (no — range $\{0,\dots,10\}$); outcome of a 6-sided die (no — 6 outcomes, that's $DU$); **randomly selected student is left-handed (yes)**; number of emails today (no). A Bernoulli RV must have exactly **two** outcomes.
+
+### 3.5.2 Binomial Distribution $X \sim \text{Bin}(n, p)$
+
+> [!success] Binomial $\text{Bin}(n,p)$
+> **$n$ independent Bernoulli($p$) trials**; $X$ = number of **successes**.
+> - **Range:** $A = \{0, 1, \dots, n\}$.
+> - **Special case:** $\text{Bin}(1, p) = \text{Ber}(p)$ (a single trial).
+> *(Full pmf / mean / variance / MGF: next lecture.)*
+
+**Examples:** flip a fair coin 20 times, $X$ = # heads → $\text{Bin}(20, \tfrac12)$; draw 1–9 with replacement five times, $X$ = # odd numbers (odds are 1,3,5,7,9) → $\text{Bin}(5, \tfrac59)$.
+
+> [!abstract] Summary — §3.5 (so far)
+> Named distributions package recurring counting patterns; the skill is recognizing **which one applies**. **Discrete Uniform** $DU(a,b)$: equally likely integers $a..b$, $E=\tfrac{a+b}{2}$ (dice / number draws; max or min of several → CDF-first). **Bernoulli** $\text{Ber}(p)$: one success/failure trial, $E=p$, $\text{Var}=p(1-p)$. **Binomial** $\text{Bin}(n,p)$: count of successes in $n$ independent Bernoulli trials, range $0..n$, with $\text{Bin}(1,p)=\text{Ber}(p)$.
 
 ---
 
@@ -1135,7 +1329,12 @@ Key terms, grouped by chapter. Symbols: $S$ sample space · $\bar A$ complement 
 - **Expectation / mean / first moment** — $\mu=E(X)=\sum x f(x)$; probability-weighted average / balancing point / long-run average (LLN); need not be in the range; may be $+\infty$.
 - **LOTUS** — $E[g(X)]=\sum g(x)f(x)$ (no need for $g(X)$'s pmf).
 - **Linearity of expectation** — $E[\sum c_i g_i(X)]=\sum c_i E[g_i(X)]$; $E(aX+b)=aE(X)+b$ (proof: swap sum order, pull out the constant); $E[c]=c$ for a constant; but $g(E[X])\ne E[g(X)]$ for nonlinear $g$ (e.g. $E|X|\ne|E(X)|$, $E[X^2]\ne(E X)^2$).
-- **Key series** — geometric $\sum r^i = 1/(1-r)$, partial geometric $\sum_{i=0}^{n} r^i = (1-r^{n+1})/(1-r)$, binomial theorem, Taylor series for $e^x$ (used to sum pmf's / find means).
+- **Variance** — $\sigma^2=\text{Var}(X)=E[(X-\mu)^2]=E[X^2]-\mu^2$ (also $=E[X(X-1)]+\mu-\mu^2$); spread measure; $\ge0$, $=0$ iff point mass; squared scale; die $=2.917$.
+- **Standard deviation** — $\sigma=SD(X)=\sqrt{\text{Var}(X)}$; same scale as $X$. **Linear map:** $\text{Var}(aX+b)=a^2\text{Var}(X)$, $SD(aX+b)=|a|SD(X)$ (shift $b$ doesn't affect spread).
+- **Moments** — $E[X^n]$; 1st=mean, 2nd→variance, 3rd→skewness, 4th→kurtosis.
+- **Moment generating function (MGF)** — $M(t)=E[e^{tX}]=\sum e^{tx}f(x)$; finite in an open interval around 0; $M(0)=1$; **unique** (matching MGF ⟹ same distribution); **moments** $E[X^n]=M^{(n)}(0)$; linear map $M_{aX+b}(t)=e^{bt}M_X(at)$; may not exist (e.g. $6/(\pi^2x^2)$ via Taylor $e^z>1+z$).
+- **Named distributions** — recognize which applies. **Discrete Uniform $DU(a,b)$:** equally likely $a..b$, $f=1/(b-a+1)$, $E=(a+b)/2$, $\text{Var}=((b-a+1)^2-1)/12$. **Bernoulli $\text{Ber}(p)$:** one trial, $\{0,1\}$, $E=p$, $\text{Var}=p(1-p)$, MGF $(1-p)+pe^t$. **Binomial $\text{Bin}(n,p)$:** # successes in $n$ independent Bernoulli trials, range $0..n$, $\text{Bin}(1,p)=\text{Ber}(p)$.
+- **Key series** — geometric $\sum r^i = 1/(1-r)$, partial geometric $\sum_{i=0}^{n} r^i = (1-r^{n+1})/(1-r)$, binomial theorem, Taylor series for $e^x$, arithmetic $\sum_{1}^{n} i = n(n+1)/2$ (used to sum pmf's / find moments).
 
 ---
 
