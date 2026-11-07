@@ -6,7 +6,6 @@ tags:
 course: CS 245
 term: Fall 2026
 ---
-
 # CS 245 — Logic and Computation — Complete Notes
 
 *UWaterloo, instructor Lila Kari. All propositional-logic lectures in one file. Math is written in plain Unicode so it reads in any viewer (Obsidian, terminal, GitHub). A per-chapter **Glossary** is at the end.*

@@ -1088,7 +1088,7 @@ low   Code │ Read-Only Data │ Global Data │ Heap  ↓ … ↑  Stack   hig
 > - use **pointers to structures as parameters** (and explain why parameters are often struct pointers);
 > - explain **when a pointer parameter should be `const`**; use **function pointers**.
 >
-> *Optional readings: CP:AMA 11, 17.7.* Pointers are **fundamental** to C and reappear in arrays (§5), dynamic memory (§8), and linked structures / lists & trees (§9). *(Notes so far cover 4.1 — Introduction; 4.2–4.4 to follow.)*
+> *Optional readings: CP:AMA 11, 17.7.* Pointers are **fundamental** to C and reappear in arrays (§5), dynamic memory (§8), and linked structures / lists & trees (§9).
 
 ## 4.1 The Address Operator (`&`)
 
@@ -1305,6 +1305,223 @@ int **p3 = &p1;
 **p3 = 1000;      // i == 1000 (same as *(*p3))
 ```
 
+## 4.10 Pass by Value — functions get *copies*
+
+> [!success] Pass by value
+> When a function is called, a **copy** of each argument is placed in the stack frame. So a function **cannot change the caller's variable** — it only changes its own copy.
+
+```c
+// Example 4.2.1 — inc can't change x
+void inc(int i) { ++i; }     // changes the COPY i, not the caller's x
+int main(void) {
+  int x = 5;
+  inc(x);
+  trace_int(x);              // still 5
+}
+```
+
+> [!note] Stack-frame view (inside `inc`, at `++i`)
+> ```
+> inc:   i: 5 → 6        (a copy; the caller's x is untouched)
+>        return address: main:...
+> main:  x: 5            (unchanged)
+> ```
+
+## 4.11 Emulating Pass by Reference — pass a pointer
+
+The opposite convention is **pass by reference** (the function *can* change the caller's variable). C emulates it by **passing the address** (`&x`); the parameter type is a pointer (`int *`).
+
+> [!tip] Still technically pass by value
+> You're passing the **value of the address** — C is always pass-by-value. We just say "**pass a pointer to x**." Through that pointer the function reaches and mutates `x`.
+
+```c
+// Example 4.2.2 — inc CAN change x via a pointer
+// effects: modifies *p
+// requires: p is a valid pointer
+void inc(int *p) {
+  assert(p);
+  *p += 1;        // or (*p)++;  — parens REQUIRED (see below)
+}
+int main(void) {
+  int x = 5;
+  inc(&x);        // note the &
+  trace_int(x);   // 6
+}
+```
+
+> [!danger] `(*p)++` needs the parentheses
+> `*p += 1;` can be written `(*p)++;` but **not** `*p++;` — by precedence `++` would increment the **pointer `p`**, not `*p`.
+
+> [!warning] Validate pointer parameters
+> **Most pointer parameters should be required non-`NULL`.** Document `// requires: p is a valid pointer` and **`assert(p);`** at the top (recall `NULL` is false, so `assert(p)` checks non-NULL).
+
+## 4.12 `scanf` Demystified
+
+Now the `&` in `scanf` makes sense: `scanf` takes a **format specifier** plus a **pointer** to where to store the value, and uses **pass by reference** to write into it.
+
+```c
+int i = 0;
+int retval = scanf("%d", &i);   // same idea as inc(&i): pass a pointer so scanf can write i
+```
+
+Compared to `inc(&x)`, the behaviour is identical — both pass a pointer so the function can change the value at that address. `inc` increments it; `scanf` overwrites it with a value read from input.
+
+## 4.13 The Four Side Effects
+
+> [!success] A function may have four kinds of side effect
+> 1. **produce output**, 2. **read input**, 3. **mutate a global variable**, 4. **mutate a variable through a pointer parameter** (new this section).
+
+```c
+// Example 4.2.3 — swap
+// effects: modifies *px and *py
+// requires: px and py are valid pointers
+void swap(int *px, int *py) {
+  assert(px); assert(py);
+  int temp = *px;
+  *px = *py;
+  *py = temp;
+}
+```
+
+> [!note] Racket aside
+> In the functional paradigm there is **no observable difference** between pass-by-value and pass-by-reference. In Racket, simple values (numbers) are passed **by value**, but **structures** are passed **by reference**.
+
+## 4.14 Returning an Address (and the cardinal rule)
+
+A function may **return an address** (e.g. `int *`). `ptr_to_max` returns whichever pointer points at the larger value.
+
+> [!danger] NEVER return the address of a variable in your own stack frame
+> When a function returns, its **stack frame disappears** and all memory in it becomes **invalid**. Returning `&`(a local or parameter) hands back a **dangling** address — edX warns/errors.
+> ```c
+> int *bad_idea(int n)  { return &n; }            // BAD: n is in this frame
+> int *bad_idea2(int n) { int a = n*n; return &a; } // BAD: a is in this frame
+> ```
+> `ptr_to_max` is **fine** because the address it returns (`&x` or `&y`) lives in the **caller's** frame, not its own.
+
+```c
+// Example 4.2.4 — correct: returns a caller-owned address
+// requires: a, b are valid pointers
+int *ptr_to_max(int *a, int *b) {
+  assert(a); assert(b);
+  return (*a >= *b) ? a : b;
+}
+```
+
+> [!note] Modelling pointers in a snapshot
+> When addresses are unknown, write them symbolically — `[addr_1]`, `[addr_2]` — and draw an arrow from the pointer to the box it names.
+
+## 4.15 Returning Multiple Values
+
+C functions return **one** value, but **pointer parameters** let a function "return" several (and signal errors) — exactly how `scanf` gives you both a return value *and* the value read.
+
+```c
+// Example 4.3.1 — divide "returns" quotient AND remainder, plus an error flag
+// effects: may modify *quot, *rem
+// requires: quot, rem are valid pointers
+bool divide(int num, int denom, int *quot, int *rem) {
+  assert(quot); assert(rem);
+  if (denom == 0) return true;      // true == error (division by zero)
+  *quot = num / denom;
+  *rem  = num % denom;
+  return false;                     // false == success
+}
+```
+
+> [!tip] Error conventions
+> Some C library functions report errors through such a **bool/return flag**; others return a **sentinel value** like **`-1`** or **`NULL`**.
+
+## 4.16 Passing Structures (efficiency *and* mutation)
+
+> [!success] Pass a struct *pointer*, not the struct
+> A call copies the **entire structure** into the frame — wasteful for large structs (`struct bigstruct { int a; … int z; }`). Passing the **address** avoids the copy. **Two reasons** to pass a `struct T *`:
+> 1. **avoid copying** the structure, and
+> 2. **mutate** its fields.
+
+```c
+// Example 4.4.1
+// requires: p1, p2 are not null
+int sqr_dist(struct posn *p1, struct posn *p2) {   // pointer to avoid copying
+  assert(p1); assert(p2);
+  int dx = p1->x - p2->x, dy = p1->y - p2->y;
+  return dx*dx + dy*dy;
+}
+// scale(p, f) scales the posn p by f
+// effects: modifies p
+void scale(struct posn *p, int f) {                // pointer to mutate
+  assert(p);
+  p->x *= f;
+  p->y *= f;
+}
+```
+
+*(Docs write `p` where `*p` would be strictly correct — it's understood. Documenting the **absence** of a side effect is awkward, so we usually don't.)*
+
+## 4.17 `const` Pointers & `const` Parameters
+
+> [!success] `const` on a pointer protects the destination
+> A pointer definition **beginning with `const`** prevents the **destination** (what it points at) from being **mutated through the pointer**. Good style on pointer parameters — communicates and enforces "I won't change your data."
+
+```c
+// Example 4.4.2
+void can_change(struct posn *p)        { p->x = 5; }   // VALID
+void cannot_change(const struct posn *p) { /* p->x = 5; INVALID */ }
+```
+
+> [!tip] Read a pointer type **backwards**; the four combinations
+> `const int *p` → "`p` is a pointer to an int that **cannot be modified via `*p`**."
+>
+> | Declaration | Can repoint `p`? | Can modify `*p`? |
+> |---|---|---|
+> | `int *p;` | yes | **yes** |
+> | `const int *p;` | yes | **no** |
+> | `int * const p = &i;` | **no** (fixed to `i`) | yes (if `i` mutable) |
+> | `const int * const p = &i;` | **no** | **no** |
+>
+> **Rule:** *`const` applies to the type on its **left**, unless it is first — then to the type on its **right**.* So `const int i` ≡ `int const i` (the second form is discouraged).
+
+> [!note] `const` on a *simple* parameter
+> It makes the parameter **immutable inside the function**. Parameters are **locals on the stack**, so `const int x` just means you can't reassign `x`. C does **not** require the **argument** to be const — a copy is made, so the original's constness is irrelevant.
+
+## 4.18 Minimizing Mutative Side Effects (design hierarchy)
+
+> [!success] Prefer, in order (most → least desirable)
+> 1. **Pure function** — no side effects, no dependence on global mutables.
+> 2. **Only I/O side effects** — avoid mutative ones if possible.
+> 3. **Mutate through a pointer parameter** — when mutation is necessary.
+> 4. **Depend on a global mutable** — avoid.
+> 5. **Mutate global data** — only when absolutely necessary (rare).
+>
+> Global **mutable** variables are poor style; global **constants** are good style.
+
+## 4.19 Function Pointers
+
+In **Racket**, functions are **first-class values** (store them, pass them, return them, and even create new ones at runtime). In **C**, functions are **not** first-class — but **function pointers are**.
+
+> [!note] What a function pointer is
+> A function pointer stores the **starting address of an existing function** (an address in the **Code** section) — C can't create functions at runtime, so a function pointer can only point at a function that **already exists**. Its **type includes the return type and all parameter types**:
+> ```
+> return_type (*fpname)(param1_type, param2_type, …)
+> ```
+
+```c
+// Example 4.4.3
+int my_add(int x, int y) { return x + y; }
+int my_sub(int x, int y) { return x - y; }
+int main(void) {
+  int (*fp)(int, int) = NULL;   // function pointer, initialized to NULL
+  fp = my_add;                  // (or fp = &my_add; — equivalent)
+  trace_int(fp(7, 3));          // 10
+  fp = my_sub;
+  trace_int(fp(7, 3));          // 4
+}
+```
+
+- `fp = my_add;` and `fp = &my_add;` are **equivalent** — since C can't take a function's "value", it uses its **address**; `my_add` is cleaner, `&my_add` is more correct.
+- You can **pass a function pointer to a function** (e.g. `io_apply(int (*f)(int))` reads ints and prints `f(n)` for each).
+
+> [!tip] Exam note
+> You are **not** expected to memorize the function-pointer **syntax** — just understand what they are and that you can pass/store them.
+
 ---
 
 # Glossary
@@ -1424,3 +1641,14 @@ int **p3 = &p1;
 - **Dereference `*`** — `*p` = the **value** `p` points at (inverse of `&`); `*&i` = `i`; dereferencing `NULL` **crashes**. `*` has **3 uses**: multiply, pointer def/type, dereference.
 - **Arrow `->`** — `ptr->field` ≡ `(*ptr).field` (needed because `.` binds tighter than `*`); prefer `->`.
 - **Aliasing** — the same address reachable via **>1 pointer**. `p = q;` changes **which box `p` points at** (data untouched); `*p = *q;` changes **the value in the box `p` points at** (`p` untouched).
+- **Pass by value** — C copies each argument into the frame; a function can't change the caller's variable, only its own copy.
+- **Emulating pass by reference** — pass an **address** (`&x`), parameter `T *`; the function mutates `*p`. Still technically pass-by-value (the address's value). `(*p)++` needs parens (else `++` hits `p`).
+- **Validate pointer params** — `// requires: p is a valid pointer` + `assert(p);` (non-NULL).
+- **`scanf` = pass by reference** — takes a format specifier + a **pointer** to store into (`scanf("%d", &i)`).
+- **Four side effects** — produce output, read input, mutate a global, **mutate through a pointer parameter**.
+- **Returning an address** — a function may return `T *`; **never return the address of a variable in its own stack frame** (frame vanishes → dangling pointer). Returning a caller-owned address (`ptr_to_max`) is fine.
+- **Returning multiple values** — use pointer parameters (e.g. `divide` sets `*quot`,`*rem` and returns a bool error flag); errors also signalled by sentinels (`-1`, `NULL`).
+- **Passing structs** — pass `struct T *` to (1) avoid copying the whole struct and (2) mutate its fields.
+- **`const` pointer forms** — `int *p` (modify via `*p`), `const int *p` (can't modify `*p`), `int * const p` (can't repoint), `const int * const p` (neither). Rule: `const` binds the type on its left, unless first → the type on its right. `const` on a simple param = immutable local.
+- **Side-effect hierarchy** — pure > I/O-only > mutate-via-pointer > depend-on-global-mutable > mutate-global (last resort).
+- **Function pointer** — stores the **address of an existing function** (Code section); type = `return_type (*name)(param_types)`; `fp = my_add` ≡ `fp = &my_add`; functions aren't first-class in C but function pointers are. (Syntax not examinable.)
