@@ -1524,6 +1524,286 @@ int main(void) {
 
 ---
 
+# Topic 5 — Arrays and Strings
+
+> [!abstract] Goal & objectives
+> **Primary goal:** use **arrays** and **strings**. By the end you should be able to:
+> - **define and initialize arrays**; **iterate** through them;
+> - explain how arrays are **represented in memory**, and how the index operator **`[]`** uses **pointer arithmetic**; convert between **array-index** and **pointer** notation;
+> - use **oversized arrays**; represent **multi-dimensional data in a 1-D array**;
+> - recognize a **C string** as a **null-terminated `char` array**; explain **string literals** and the difference between a string **array** and a string **pointer**;
+> - do **string I/O** and explain the consequences of **buffer overruns**; use **`<string.h>`** functions from a documented interface.
+>
+> *Optional readings: CP:AMA 8.1, 9.3, 12.1, 12.2, 12.3, 13.*
+
+## 5.1 Arrays — the Basics
+
+C has only **two** built-in **compound** data types: **structures** and **arrays**.
+
+> [!success] What an array is
+> An **array** holds a **fixed number of elements**, all of the **same type**. You must know its **length in advance**. Each value is an **element**, accessed by its **index** — and **indices start at 0**: `a[0]` is first, `a[5]` is the last of a 6-element array.
+
+- An element works like a variable in an expression, and the **index itself can be an expression** (`a[a[0]]`).
+
+```c
+// Example 5.1.1 — arrays & iteration
+int a[6] = {4, 8, 15, 16, 23, 42};
+int j = a[0];          // j is 4
+int *p = &a[j - 1];    // p points at a[3]
+a[2] = a[a[0]];        // index is an expression → a[2] becomes a[4] == 23
+++a[1];                // a[1] becomes 9
+
+int sum = 0;
+for (int i = 0; i < 6; ++i) { sum += a[i]; }   // arrays + iteration
+```
+
+## 5.2 Array Initialization
+
+> [!warning] Initialization rules
+> - You can **only** initialize with the **size in `[]`** *and* **braces `{}`**: `int a[6] = {…};`. `a = {0,0,0,0,0,0};` is **invalid** (no size, and you can't assign a whole array); braces-less init is invalid too.
+> - **Partial** initialization is fine — **missing elements become 0**: `int b[5] = {1,2,3};` → `b[3]==b[4]==0`; `int c[5] = {0};` zeroes **all**.
+> - After definition, the **whole array can't be mutated at once** and its **length can't change** — only **individual elements**.
+
+> [!warning] Uninitialized arrays
+> Like variables: an uninitialized **global** array is **zero-filled**; an uninitialized **local** array holds **garbage** from the stack.
+
+*(Character arrays can be initialized with double quotes `"…"` for convenience — but such a `char` array is **not yet a valid string**; see §5.9.)*
+
+## 5.3 Array Length — C Does **Not** Track It
+
+> [!danger] You must track the length yourself
+> C keeps **no record** of an array's length in the data structure — **you** must track it separately (e.g. a companion `const int a_len = 6;`, declared **after** the array). In this course, **define arrays with a numeric literal** (`int a[6] = …;`) — these "magic numbers" are allowed here.
+
+> [!tip] `size_t` and the backwards-loop trap (not used in this course)
+> Guides often loop with the **unsigned** type **`size_t`** (`for (size_t i = 0; i < len; ++i)`) since lengths can exceed `INT_MAX`. But because it's **unsigned**, looping **backwards** is a bug:
+> ```c
+> for (size_t i = len - 1; i >= 0; --i) { … }   // INFINITE LOOP: i is never negative
+> ```
+> We don't use `size_t` (or advanced int types) in this course.
+
+> [!note] Other ways to fix a length (context)
+> - **`#define A_LEN 6`** — a **preprocessor macro** (not a variable/constant); every `A_LEN` is **textually replaced with 6 before compiling**. Preferred way to name a length.
+> - **VLAs** (variable-length arrays, C99): `int a[m];` with `m` a runtime value grows the stack frame — many downsides, later made optional, **banned in this course**.
+> - `sizeof(a)/sizeof(a[0])` *can* give a length but only in narrow cases — **avoid**.
+
+> [!success] Length vs size
+> **Length** = number of **elements**; **size** = number of **bytes**. An array of `k` elements each of size `s` occupies exactly **`k * s` bytes** (e.g. `int a[6]` → `6 * 4 = 24` bytes).
+
+## 5.4 Arrays in Memory (and array "decay")
+
+> [!success] Contiguous, and the name decays to `&a[0]`
+> Array elements are stored **adjacently** (each right after the previous). An array has **no value of its own**: used in an expression, the name **"decays" to the address of the array** `&a`, which is also the address of the **first element** `&a[0]`. So `a`, `&a`, and `&a[0]` all print the **same address**, and **`*a` == `a[0]`**.
+
+```c
+// Example 5.1.2 / 5.1.3
+int a[6] = {4, 8, 15, 16, 23, 42};
+trace_ptr(a);  trace_ptr(&a);  trace_ptr(&a[0]);   // all the SAME address
+trace_int(*a); trace_int(a[0]);                     // both 4
+```
+
+> [!warning] `a` and `&a` have the same value but **different types**
+> They are **not** always interchangeable, even though they point to the same place.
+
+## 5.5 Passing Arrays to Functions
+
+> [!success] Only the address is copied
+> Passing an array copies just its **address** into the frame (efficient — the elements are **not** copied). The **length is usually a separate parameter**, and there is **no way to `assert` that a passed length is valid** — functions must simply *require* it.
+
+```c
+// Example 5.1.3
+// requires: len > 0
+int sum_array(const int a[], int len) {      // const → promises not to mutate
+  assert(a); assert(len > 0);
+  int sum = 0;
+  for (int i = 0; i < len; ++i) sum += a[i];
+  return sum;
+}
+// effects: modifies a
+void array_negate(int a[], int len) {        // no const → may mutate the caller's array
+  assert(a); assert(len > 0);
+  for (int i = 0; i < len; ++i) a[i] = -a[i];
+}
+```
+
+- Because you pass the **address**, the function **can mutate** the caller's array (`array_negate`). Use **`const`** on the parameter to both **prevent** mutation and **communicate** "I won't change your array."
+
+> [!warning] A length written in the parameter is *ignored*
+> `void calendar(int days_per_month[12])` — the **`12` is ignored**; the function may receive an array of **any** length. (`int a[]` and `int a[12]` parameters are equivalent.)
+
+## 5.6 Oversized Arrays
+
+When a maximum length is acceptable, use an **oversized array**: allocate the max and track the **actual** length too. Aggregate both (and the data) in a **structure**.
+
+```c
+// Example 5.1.5
+struct oversized_array {
+  int len;        // actual number of elements in use
+  int maxlen;     // capacity
+  int data[10];
+};
+int main(void) {
+  struct oversized_array arr = {0, 10};   // len=0, maxlen=10
+  int i = 0;
+  while (scanf("%d", &i) == 1) {
+    if (arr.len == arr.maxlen) { printf("Error: array is full.\n"); break; }
+    arr.data[arr.len] = i;
+    ++arr.len;
+  }
+}
+```
+
+> [!danger] A struct containing an array must be passed by **pointer**
+> Passing such a struct **by value copies the entire array** into the frame. `void bad(struct oversized_array a)` copies all 10 ints; `void good(struct oversized_array *p)` copies only the **address** (use `p->len`, `p->data[i]`).
+
+> [!tip] Trade-off
+> Oversized arrays waste space if the max is too big, and break if it's too small. Dynamic memory (§8) removes the fixed-length limit properly.
+
+## 5.7 Multi-Dimensional Data in a 1-D Array
+
+C does support true multi-dimensional arrays (`int a[2][3]`, `int b[10][10][10]`) but they are **not covered**; instead we **map** higher dimensions onto one.
+
+> [!success] Row-major mapping
+> A 2-D grid with `NUMCOLS` columns, element at row `r`, column `c`, lives at **`data[r * NUMCOLS + c]`**.
+> ```
+> rows:  1 2 3        int data[6] = {1, 2, 3, 7, 8, 9};
+>        7 8 9        data[1*3 + 2] == 9   (row 1, col 2)
+> ```
+
+*(If you ever pass a real multi-dim array, the **second and later dimensions must be fixed**: `int f(int a[][10], int numrows)`. Internally C stores it as a 1-D array with this same mapping.)*
+
+## 5.8 Pointer Arithmetic
+
+> [!success] Adding to a pointer scales by the pointed-at size
+> For a pointer `p`, **`p + 1` advances by `sizeof(*p)` bytes** — the result depends on `p`'s type. In "normal" arithmetic, **`p + i`** is the address **`p + i * sizeof(*p)`**. (The C standard only defines pointer arithmetic **within an array or structure**.)
+
+> [!note] The rules
+> - **`p + i`** / **`p - i`** — move by `i * sizeof(*p)` bytes. `++p` ≡ `p = p + 1`.
+> - You **cannot add two pointers**.
+> - You **can subtract** two pointers of the **same type**: `p - q` is `(p − q) / sizeof(*p)` elements (so if `p = q + i`, then `i = p - q`).
+> - Same-type pointers can be **compared** with `< <= == != >= >` (e.g. `if (p < q)`).
+
+## 5.9 `[]` *is* Pointer Arithmetic — and C does **no** bounds checking
+
+> [!success] `a[i]` ≡ `*(a + i)`
+> The index operator `[]` is **pointer arithmetic**: `a[1]` is `*(a + 1)`, `&a[1]` is `a + 1`. Since `a` decays to `&a[0]`, indexing just adds and dereferences.
+
+> [!danger] No bounds checking
+> C **never checks** that `a[j]` is in range — it blindly computes `*(a + j)`, even for `a[1000000]` or `a[-1]`, reading/writing **outside the array**. This is a top source of C bugs (and a classic criticism); many modern languages add bounds checking.
+
+## 5.10 Array-Pointer Notation
+
+You can traverse an array with a **moving pointer** instead of an index — the two styles are equivalent, and `int a[]` and `int *a` **parameters are identical to C**.
+
+```c
+// Example 5.2.1 — pointer notation vs index notation (same behaviour)
+int sum_array(const int *a, const int len) {        // pointer style
+  assert(a); assert(len > 0);
+  int sum = 0;
+  for (const int *p = a; p < a + len; ++p) sum += *p;   // walk the pointer
+  return sum;
+}
+int sum_array_old(const int a[], const int len) {   // index style
+  assert(a); assert(len > 0);
+  int sum = 0;
+  for (int i = 0; i < len; ++i) sum += a[i];
+  return sum;
+}
+```
+
+> [!tip] Style
+> `const int *p` lets you move `p` but not change `*p`. Pointer vs `[]` is a matter of taste/context — be fluent in **both**. (Pointer walking was historically a hair faster; negligible now.)
+
+## 5.11 C Strings & Null Termination
+
+> [!success] A C string is a null-terminated `char` array
+> There is **no built-in string type**. The convention: a **string** is a **`char` array ending in the null character `'\0'`** (a `char` of value **0**, written `'\0'` to show intent). These are all equivalent 4-char strings `"cat"`:
+> ```c
+> char a[4] = {'c','a','t','\0'};   char b[4] = {'c','a','t', 0};
+> char c[4] = {'c','a','t'};        // 4th element auto-zeroed → still '\0'
+> char d[4] = {99, 97, 116, 0};     // ASCII codes
+> char e[]  = "cat";                // auto length (4); "" adds the '\0' for you
+> ```
+
+> [!warning] `'\0'` vs `'0'`, and forgetting the terminator
+> `'\0'` **== 0**; `'0'` **== 48** (the ASCII digit). `'\0'` is non-printing. **Strings are the one exception** to the course's "size must be a number" rule — you may use **auto length `[]`** with a string literal. If you **forget the `'\0'`**, string loops run past the array **until some 0 happens to appear in memory**.
+
+> [!success] Null termination ⇒ no length parameter
+> Because the end is marked by `'\0'`, string functions **don't need a length** — they loop while the char is non-zero (`while (s[i])`). Use **`const char *`** / **`const char s[]`** when not mutating.
+
+```c
+// Example 5.3.2 — count 'e'/'E'; stops at '\0'
+int e_count(const char s[]) {
+  assert(s);
+  int count = 0, i = 0;
+  while (s[i]) {                 // '\0' (0) ends the loop
+    if (s[i] == 'e' || s[i] == 'E') ++count;
+    ++i;
+  }
+  return count;
+}
+```
+
+## 5.12 `strlen` and the In-Loop Pitfall
+
+`strlen` (from **`<string.h>`**) returns the **string length** — the number of chars **before** the `'\0'` (not the array size).
+
+```c
+int my_strlen(const char s[])  { int len = 0; while (s[len]) ++len; return len; }
+int my_strlen_ptr(const char *s){ const char *p = s; while (*p) ++p; return p - s; }  // pointer arithmetic
+```
+
+> [!danger] Never call `strlen` in a loop condition
+> `strlen` **re-scans the whole string every iteration** — quadratic and wasteful. **Compute it once** before the loop. (This mistake is **harshly penalized** on assignments/exams.)
+> ```c
+> for (int i = 0; i < strlen(s); ++i) { … }   // BAD — strlen runs every pass
+> int len = strlen(s);
+> for (int i = 0; i < len; ++i) { … }          // GOOD
+> ```
+
+## 5.13 Comparing Strings — Lexicographical Order
+
+> [!danger] Never compare strings with `==`
+> Chars compare fine (`c1 < c2` uses ASCII), but `s1 == s2` / `s1 < s2` compares **addresses**, not contents. Use **`strcmp`**. (We say a string **precedes** / **follows** another — "smaller/greater" is ambiguous.)
+
+> [!success] `strcmp(s1, s2)`
+> Compares **lexicographically** (first differing char decides; a prefix precedes the longer string; equal = same length and chars). Returns **`0` if identical**, a **negative** int if `s1` **precedes** `s2`, a **positive** int if `s1` **follows**. So **"equal" means `strcmp(...) == 0`**.
+> Order example: `"" < "a" < "az" < "c" < "cab" < "cabin" < "cat" < "catastrophe"`.
+
+```c
+// Example 5.3.5 — my_strcmp
+int my_strcmp(const char s1[], const char s2[]) {
+  assert(s1); assert(s2);
+  int i = 0;
+  while (s1[i] == s2[i] && s1[i]) ++i;   // stop at first difference or '\0'
+  return s1[i] - s2[i];                  // char difference (ints!)
+}
+```
+
+## 5.14 Copying & Concatenating — `strcpy`, `strcat`, and Buffer Overruns
+
+- **`strcpy(dest, src)`** overwrites `dest` with `src` (copying up to and including `'\0'`). Its return value (address of `dest`) is historical and usually ignored.
+- **`strcat(dest, src)`** appends `src` onto the end of `dest`: `strcpy(dest + strlen(dest), src)`.
+
+```c
+char *my_strcpy(char *dest, const char *src) {
+  assert(dest); assert(src);
+  char *d = dest;
+  while (*src) { *d = *src; ++d; ++src; }
+  *d = '\0';                 // must add the terminator manually
+  return dest;
+}
+char *my_strcat(char *dest, const char *src) {
+  assert(dest); assert(src);
+  strcpy(dest + strlen(dest), src);   // copy src right after dest's last char
+  return dest;
+}
+```
+
+> [!danger] Buffer overrun (buffer overflow)
+> `strcpy`/`strcat` can **write past the end of `dest`** if it isn't big enough — a major source of **crashes and security holes** that C is especially prone to. **Always size `dest` to fit the result + the `'\0'`** (e.g. `"dog"`+`"cat"` needs `char b[7]`). Also never let `dest` and `src` **overlap** (e.g. `strcpy(s + 1, s)` overwrites `src`'s `'\0'` and copies forever until it crashes).
+
+---
+
 # Glossary
 
 *Key terms per chapter. Jump to a term's chapter for the full treatment.*
