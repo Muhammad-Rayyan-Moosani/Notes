@@ -16,8 +16,9 @@ term: Fall 2026
 1. [[#Topic 1 — Functional C|Topic 1 — Functional C]] — history & C99, compilation & files, `main` & exit codes, `printf`/tracing, operators, octal trap, static typing, identifiers & style, declarations vs definitions, booleans, the design recipe & `assert`, control flow, recursion (simple/accumulative/mutual)
 2. [[#Topic 2 — Imperative C|Topic 2 — Imperative C]] — functional vs imperative, side effects & `effects:`, `printf`/`scanf` I/O, variables/mutation/`const`, scope & purity, expression statements, testing (streams, harnesses, terminology)
 3. [[#Topic 3 — The C Model|Topic 3 — The C Model]] — control-flow model, loops & `break`/`continue`, iteration↔recursion, memory (bits/`sizeof`/overflow), `char`/ASCII, `struct`, the five memory sections, **call stack & stack frames** (pass-by-value), and drawing a **memory snapshot**
-4. [[#Topic 4 — Pointers|Topic 4 — Pointers]] — the address operator `&`, pointers & pointer types, `NULL`, `sizeof` a pointer, the dereference operator `*`, the arrow operator `->`, and **aliasing**
-5. [[#Glossary|Glossary]] — key terms, grouped by chapter
+4. [[#Topic 4 — Pointers|Topic 4 — Pointers]] — the address operator `&`, pointers & pointer types, `NULL`, `sizeof` a pointer, the dereference operator `*`, the arrow operator `->`, **aliasing**, pass-by-value/reference, returning addresses, `const` pointers, function pointers
+5. [[#Topic 5 — Arrays and Strings|Topic 5 — Arrays and Strings]] — arrays (init, length vs size, **decay**, **no bounds checking**, oversized arrays, 2D→1D), **pointer arithmetic** & `a[i]≡*(a+i)`, C strings & null termination, `strlen`/`strcmp`/`strcpy`/`strcat`, string I/O & **buffer overruns**, string literals, `char a[]` vs `char *p`
+6. [[#Glossary|Glossary]] — key terms, grouped by chapter
 
 ### How to read these notes
 
@@ -1802,6 +1803,79 @@ char *my_strcat(char *dest, const char *src) {
 > [!danger] Buffer overrun (buffer overflow)
 > `strcpy`/`strcat` can **write past the end of `dest`** if it isn't big enough — a major source of **crashes and security holes** that C is especially prone to. **Always size `dest` to fit the result + the `'\0'`** (e.g. `"dog"`+`"cat"` needs `char b[7]`). Also never let `dest` and `src` **overlap** (e.g. `strcpy(s + 1, s)` overwrites `src`'s `'\0'` and copies forever until it crashes).
 
+## 5.15 String I/O — `%s` and the width specifier
+
+- **`printf("%s", s)`** prints chars until the `'\0'` (the terminator itself is **not** printed).
+- **`scanf("%s", s)`** reads **one "word"** — it **stops at whitespace** (space or `\n`).
+
+> [!danger] A bare `scanf("%s", …)` is a buffer overrun waiting to happen
+> It writes as many chars as are typed, past the end of the array. **Always use a width specifier** — a number between `%` and `s` capping the chars read. For `char name[81]`, use **`scanf("%80s", name)`** (80 + the `'\0'` that `scanf` adds = 81).
+
+```c
+char name[81] = {0};
+int retval = scanf("%80s", name);   // at most 80 chars; '\0' added automatically
+assert(retval > 0);
+printf("Hello, %s.\n", name);
+```
+
+- For **multiple words**, loop: `while (scanf("%9s", name) == 1) { … }` — each pass overwrites `name` with the next word (so after the loop it holds the **last** word read).
+
+## 5.16 What a Buffer Overrun Actually Does
+
+> [!example] Overrunning into another variable
+> Two vivid course demos (edX's address sanitizer is disabled with `NOASAN` just to show them):
+> - **Forgetting the `'\0'`:** `char a[7] = "I like ";` fills all 7 bytes with no terminator, so `printf("%s", a)` keeps reading **adjacent memory** (e.g. the bytes of a neighbouring `int`, decoded as ASCII) until it stumbles on a `0x00`.
+> - **Overrunning a bank balance:** with `char command[8]` and an unsafe `scanf("%s", command)`, typing a 12-char command writes **past `command` into the `int balance`** next to it — those 4 bytes are then **re-interpreted as an integer**. This is exactly how overruns corrupt data / become security exploits.
+
+## 5.17 Safe Input
+
+- **`fgets`** reads a whole line (including spaces) until `'\n'` or the buffer is full; returns the string's address on success, **`NULL`** on failure. It is the safe replacement for **`gets`** (deprecated since C11 — **never use `gets`**, it can't be used safely).
+
+> [!success] The CS136 rule
+> Even though `fgets` is safe, it is **not allowed** in CS136. **Read one character at a time with `scanf("%c", …)`** — that's the course's overrun-proof strategy. *(The `<string.h>` "safe" bounded variants exist too: `strnlen`, `strncmp`, `strncpy`, `strncat`.)*
+
+> [!warning] Reading is dangerous too
+> It's not only **writing** past a buffer — **reading** from an **improperly terminated** string (no `'\0'`) also runs off the end and misbehaves.
+
+## 5.18 String Literals (the read-only "literal pool")
+
+> [!success] What a string literal is
+> Any `"double-quoted"` string **not** used as an array initializer is a **string literal**. For each one, C creates a **null-terminated `const char[]` in the read-only data section** (the **"literal pool"**) and **replaces the literal with the address** of that immutable array.
+
+> [!danger] Never modify a string literal
+> It lives in **read-only** memory — mutating it is **undefined behaviour** (and errors in edX).
+
+## 5.19 Arrays vs Pointers (`char a[]` vs `char *p`)
+
+This is the subtle array/pointer distinction, made concrete with strings:
+
+> [!note] `char a[24] = "…"` vs `char *p = "…"`
+> | | `char a[24] = "…";` | `char *p = "…";` |
+> |---|---|---|
+> | What's on the stack | the **whole 24-byte array** | an **8-byte pointer** |
+> | Points at | — (it *is* the data) | a **string literal** in read-only data |
+> | Change the identifier? | **no** (`a` is a fixed address; `a = …` invalid) | **yes** (`p = otherstr;`) |
+> | Change the characters? | **yes** (`a[0] = …`) | **no** (literal is read-only) |
+> | `sizeof` | **24** (bytes of the array) | **8** (bytes of a pointer) |
+> | Relationship to `&` | `a` **==** `&a` | `p` **≠** `&p` |
+
+> [!success] Mnemonic
+> **An array behaves like a *constant pointer*** — `int a[6]` acts like `int * const p = a` (can't repoint, but can change elements). In most expressions `a` and `p` are interchangeable; the differences above are the exceptions.
+
+## 5.20 Arrays of Strings
+
+> [!success] Prefer an array of pointers
+> An "array of strings" can be a 2-D `char` array, but that's awkward (every string padded to one fixed width). The common way is an **array of `char *`**, each pointing at a string literal.
+
+```c
+const char *aos1[] = {"my", "array", "of", "strings"};   // array of pointers
+// aos1[0][1] == (aos1[0])[1] == 'y'
+// pass it with its length, like any array: f(aos1, 4)
+```
+
+- A **2-D** form fixes every string's length: `char aos2d[3][21] = {"my","two dimensional","char array"};` and a function must know the width: `void f(char aos2d[][21], int n)`.
+- For **mutable** strings (before dynamic memory, §8), define each string **separately**. *(Don't worry about `const` on arrays-of-pointers parameters — technical reasons.)*
+
 ---
 
 # Glossary
@@ -1932,3 +2006,23 @@ char *my_strcat(char *dest, const char *src) {
 - **`const` pointer forms** — `int *p` (modify via `*p`), `const int *p` (can't modify `*p`), `int * const p` (can't repoint), `const int * const p` (neither). Rule: `const` binds the type on its left, unless first → the type on its right. `const` on a simple param = immutable local.
 - **Side-effect hierarchy** — pure > I/O-only > mutate-via-pointer > depend-on-global-mutable > mutate-global (last resort).
 - **Function pointer** — stores the **address of an existing function** (Code section); type = `return_type (*name)(param_types)`; `fp = my_add` ≡ `fp = &my_add`; functions aren't first-class in C but function pointers are. (Syntax not examinable.)
+
+## Topic 5 — Arrays and Strings
+
+- **Array** — fixed number of same-type elements; **index from 0**; `a[i]` usable as a variable; index can be an expression. C's two compound types are **structs** and **arrays**.
+- **Initialization** — need **size `[]` + braces `{}`**; partial init zero-fills the rest; `{0}` zeroes all; whole array can't be assigned/resized after definition; uninitialized global → 0, local → garbage.
+- **Length vs size** — length = #elements; size = #bytes = `k * sizeof(element)`; C **does not track length** — pass/track it yourself (magic numbers OK here). `size_t` (unsigned) backward-loop is an infinite-loop trap; **VLAs banned**; `#define` names a length (preprocessor macro).
+- **Array decay** — a bare array name evaluates to **`&a[0]`** (= `&a`); elements are **contiguous**; `*a == a[0]`; `a` and `&a` share a value but have **different types**.
+- **`[]` = pointer arithmetic** — **`a[i] ≡ *(a + i)`**; `p + i` moves `i * sizeof(*p)` bytes; same-type pointers subtract/compare; **can't add two pointers**. **No bounds checking** — `a[-1]`, `a[huge]` just compute an address (top C bug source).
+- **Array parameters** — only the **address** is copied; length is a separate param you can't `assert`; `int a[]` ≡ `int *a`; a length in the param (`int a[12]`) is **ignored**; use `const` to forbid mutation.
+- **Oversized array** — fixed capacity + tracked actual length, usually in a struct `{len, maxlen, data[N]}`; **pass such a struct by pointer** (by value copies the whole array).
+- **2D → 1D** — store row-major: `data[row * NUMCOLS + col]`.
+- **C string** — a **null-terminated `char` array**; `'\0'` is a `char` of value 0 (`'\0'`==0, `'0'`==48); forgetting it makes loops run off the end. Strings may use auto length `char s[] = "cat"`.
+- **`strlen`** — length **excluding** `'\0'`; **never call it in a loop condition** (re-scans each pass — penalized).
+- **Comparing strings** — **never `==`** (compares addresses); use **`strcmp`**: 0 = equal, negative = `s1` **precedes**, positive = `s1` **follows** (lexicographic).
+- **`strcpy` / `strcat`** — overwrite / append; must add/keep the `'\0'`; `dest` must be **big enough** (incl. terminator) and must not **overlap** `src`.
+- **Buffer overrun** — writing (or reading) past a buffer; corrupts adjacent memory (e.g. a neighbouring `int`) → crashes / security holes. `scanf("%s")` is unsafe → **use a width specifier** `scanf("%80s", s)`.
+- **Safe input** — `fgets` is safe (vs deprecated `gets`) but **disallowed in CS136**; the course rule is **read one `char` at a time with `scanf("%c", …)`**. Bounded `<string.h>` variants: `strnlen`/`strncmp`/`strncpy`/`strncat`.
+- **String literal** — a `"…"` not initializing an array; stored as a `const char[]` in **read-only data** (the "literal pool"); the literal **is** its address; **modifying it is undefined behaviour**.
+- **`char a[]` vs `char *p`** — `a` is the whole array (can change **elements**, not the name; `sizeof` = bytes; `a==&a`); `p` is an 8-byte pointer to a (read-only) literal (can **repoint** `p`, not the chars). An array acts like a **constant pointer**.
+- **Array of strings** — prefer an **array of `char *`** (`aos[i][j]` = `(aos[i])[j]`); 2D `char[n][w]` fixes every width; pass with a length.
