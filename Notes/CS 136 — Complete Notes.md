@@ -518,7 +518,7 @@ void print_forward(void) {
     printf("%d\n", n);
     print_forward();          // put the recursive call BEFORE the print for reverse order
   }
-  // read failed (bad input or EOF) → base case, just return
+  // re0ad failed (bad input or EOF) → base case, just return
 }
 ```
 
@@ -1875,6 +1875,54 @@ const char *aos1[] = {"my", "array", "of", "strings"};   // array of pointers
 
 - A **2-D** form fixes every string's length: `char aos2d[3][21] = {"my","two dimensional","char array"};` and a function must know the width: `void f(char aos2d[][21], int n)`.
 - For **mutable** strings (before dynamic memory, §8), define each string **separately**. *(Don't worry about `const` on arrays-of-pointers parameters — technical reasons.)*
+
+## 5.21 Errors & Pitfalls — Quick Reference
+
+> [!abstract] Every error/pitfall in Topic 5, in one place
+> What each one **means** and what **causes** it. Grouped by *when* it bites you.
+
+### ① Compile-time errors (won't build)
+
+| Error | What it means | What causes it |
+|---|---|---|
+| **Invalid array assignment** | Won't compile | Assigning a **whole array at once** after definition — `a = {0,0,0,0,0,0};` or any braces-less/size-less init. You may only init with **size `[]` + braces `{}`** at definition, and only change **individual elements** afterwards (§5.2). |
+| **`a` vs `&a` type mismatch** | Type error / warning | Using `a` and `&a` interchangeably: they're the **same address** but **different types**, so they're **not** always swappable (§5.4). |
+
+### ② Undefined behaviour & memory corruption (builds, then misbehaves/crashes)
+
+| Error | What it means | What causes it |
+|---|---|---|
+| **Out-of-bounds access (no bounds checking)** | Reads/writes **outside the array**; corruption, crash, or silent wrong data | C **never checks** that `a[j]` is in range — it blindly computes `*(a + j)`, even for `a[-1]` or `a[1000000]` (§5.9). |
+| **Missing `'\0'` terminator** | String loops **run past the array** until a `0` happens to appear in memory → garbage output or crash | Filling a `char` array with **no room/value for `'\0'`**, e.g. `char a[7] = "I like ";` (all 7 bytes used). `printf("%s", a)` then reads adjacent memory (§5.11, §5.16). |
+| **Buffer overrun (overflow) — `strcpy`/`strcat`** | **Writes past the end of `dest`**; crashes and classic **security holes** | `dest` **too small** for `src` + the `'\0'` (e.g. `"dog"+"cat"` needs `char b[7]`) (§5.14). |
+| **Overlapping copy** | Copies **forever** until it crashes | `src` and `dest` **overlap**, e.g. `strcpy(s + 1, s)` — overwrites `src`'s `'\0'` so the loop never ends (§5.14). |
+| **Bare `scanf("%s", …)` overrun** | Writes **as many chars as the user types**, past the array end → can overwrite a **neighbouring variable** (e.g. an `int balance`, then re-read as a bogus integer) | **No width specifier.** Fix: cap it — `scanf("%80s", name)` for `char name[81]` (§5.15, §5.16). |
+| **Reading an unterminated string** | Runs off the end and misbehaves | Reading (not just writing) a string with **no `'\0'`** (§5.17). |
+| **Modifying a string literal** | **Undefined behaviour** (errors in edX) | Writing through a `char *p = "…";` — the literal lives in **read-only** memory (the "literal pool") (§5.18). |
+| **Using `gets`** | Unsafe input, **can't be used safely**; deprecated since C11 | Calling `gets` at all — use the course's one-char-at-a-time `scanf("%c", …)` instead (§5.17). |
+| **Uninitialized local array** | Holds **garbage** from the stack | Declaring a **local** array without initializing it (a **global** array is zero-filled, a local one is not) (§5.2). |
+
+### ③ Logic / correctness bugs (compiles & runs, but wrong)
+
+| Error | What it means | What causes it |
+|---|---|---|
+| **Comparing strings with `==`** | Compares **addresses, not contents** → almost always wrong | Writing `s1 == s2` / `s1 < s2` instead of **`strcmp(s1, s2)`** (== equal means `strcmp(...) == 0`) (§5.13). |
+| **Losing the length** | Reads the wrong region / wrong count | C keeps **no record** of an array's length — forgetting to track it yourself (companion `const int`, `#define`, or a numeric literal) (§5.3). |
+| **Length in a parameter is ignored** | Function silently accepts **any** length | Relying on the `12` in `void calendar(int days[12])` — it's **ignored**; `int a[]` and `int a[12]` params are identical (§5.5). |
+| **`'\0'` vs `'0'` mix-up** | Off-by-one / wrong comparisons | Confusing the **terminator `'\0'` (value 0)** with the **digit `'0'` (value 48)** (§5.11). |
+| **`size_t` backwards loop** | **Infinite loop** — `i` is unsigned, never `< 0` | `for (size_t i = len - 1; i >= 0; --i)` (course doesn't use `size_t`, but noted as a trap) (§5.3). |
+
+### ④ Performance / course-rule violations (penalized, even if it "works")
+
+| Error | What it means | What causes it |
+|---|---|---|
+| **`strlen` in a loop condition** | **Quadratic** — re-scans the whole string every iteration. **Harshly penalized** on assignments/exams | `for (int i = 0; i < strlen(s); ++i)`. Fix: compute `int len = strlen(s);` **once** before the loop (§5.12). |
+| **Struct-with-array passed by value** | Copies the **entire array** into the frame (slow) | `void bad(struct oversized_array a)`. Fix: pass by **pointer** — `void good(struct oversized_array *p)` (§5.6). |
+| **Using `fgets` in CS136** | Not allowed — breaks the course rule | Using `fgets` even though it's safe; CS136 requires **one char at a time** via `scanf("%c", …)` (§5.17). |
+| **Using a VLA** | Banned in this course | `int a[m];` with `m` a **runtime** value (variable-length array) (§5.3). |
+
+> [!warning] Runtime overrun demos only "work" because of `NOASAN`
+> edX disables the **address sanitizer** (`NOASAN`) just to *show* overruns writing into a neighbouring variable. Normally ASan would **catch and abort** — don't expect overruns to stay quiet in real code (§5.16).
 
 ---
 
